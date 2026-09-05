@@ -58,6 +58,10 @@ export default function Home() {
   // Load from localStorage after mount to prevent SSR hydration mismatch
   useEffect(() => {
     setMounted(true);
+    // Prevent browser from auto-restoring scroll positions
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
     try {
       const savedTheme = localStorage.getItem('dc_shift_theme');
       if (savedTheme) {

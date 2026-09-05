@@ -26,12 +26,34 @@ export function ShiftTable({
   const wrapperRef = useRef(null);
   const monthNameEng = new Date(year, month - 1, 1).toLocaleString('en-US', { month: 'long' });
 
-  // Always reset scroll to Day 1 whenever month or year changes
+  // Force scroll to Day 1 on mount AND whenever month/year changes
+  // Uses triple-layer reset: immediate, rAF, and timeout to defeat browser scroll restoration
   useEffect(() => {
-    if (wrapperRef.current) {
-      wrapperRef.current.scrollLeft = 0;
-      setIsScrolled(false);
-    }
+    const el = wrapperRef.current;
+    if (!el) return;
+
+    // Layer 1: Immediate
+    el.scrollLeft = 0;
+    setIsScrolled(false);
+
+    // Layer 2: requestAnimationFrame (after browser paint)
+    const rafId = requestAnimationFrame(() => {
+      if (wrapperRef.current) {
+        wrapperRef.current.scrollLeft = 0;
+      }
+    });
+
+    // Layer 3: setTimeout (after browser scroll restoration)
+    const timerId = setTimeout(() => {
+      if (wrapperRef.current) {
+        wrapperRef.current.scrollLeft = 0;
+      }
+    }, 150);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(timerId);
+    };
   }, [year, month]);
 
   const scrollToDay1 = () => {
