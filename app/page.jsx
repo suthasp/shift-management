@@ -1,0 +1,367 @@
+'use client';
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  INITIAL_STAFF, 
+  INITIAL_OCTOBER_ROSTER, 
+  DC_SETTINGS_DEFAULT,
+  SHIFT_TYPES 
+} from '../data/initialData';
+import { 
+  getDaysInMonth, 
+  calculateDailyCoverage, 
+  checkComplianceViolations, 
+  generateAutoSchedule 
+} from '../utils/schedulerEngine';
+import { exportRosterToExcel, exportBackupJSON } from '../utils/excelExport';
+
+import { Header } from '../components/Header';
+import { TopMetricsBar } from '../components/TopMetricsBar';
+import { ShiftLegend } from '../components/ShiftLegend';
+import { ShiftTable } from '../components/ShiftTable';
+import { ShiftPickerModal } from '../components/ShiftPickerModal';
+import { ShiftSwapModal } from '../components/ShiftSwapModal';
+import { AnalyticsModal } from '../components/AnalyticsModal';
+import { AutoScheduleModal } from '../components/AutoScheduleModal';
+import { StaffModal } from '../components/StaffModal';
+
+export default function Home() {
+  const [mounted, setMounted] = useState(false);
+
+  // Theme state
+  const [theme, setTheme] = useState('dark');
+
+  // Month & Year state (Defaults to October 2026 to match image exactly)
+  const [year, setYear] = useState(2026);
+  const [month, setMonth] = useState(10); // 10 = October
+
+  const daysCount = useMemo(() => getDaysInMonth(year, month), [year, month]);
+
+  // Staff list state (persisted in localStorage or default)
+  const [staffList, setStaffList] = useState(INITIAL_STAFF);
+
+  // Schedule state (Key: staffId -> Array of shifts length = daysCount)
+  const [schedule, setSchedule] = useState(INITIAL_OCTOBER_ROSTER);
+
+  // Active paint brush for quick stamp
+  const [activeBrush, setActiveBrush] = useState(null);
+
+  // Settings
+  const [settings, setSettings] = useState(DC_SETTINGS_DEFAULT);
+
+  // Modals state
+  const [isAutoScheduleOpen, setIsAutoScheduleOpen] = useState(false);
+  const [isSwapOpen, setIsSwapOpen] = useState(false);
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
+  const [isStaffOpen, setIsStaffOpen] = useState(false);
+  const [pickerTarget, setPickerTarget] = useState(null); // { staffId, dayIndex }
+
+  // Load from localStorage after mount to prevent SSR hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+    try {
+      const savedStaff = localStorage.getItem('dc_shift_staff_list');
+      if (savedStaff) {
+        setStaffList(JSON.parse(savedStaff));
+      }
+      const savedSchedule = localStorage.getItem(`dc_shift_schedule_${year}_${month}`);
+      if (savedSchedule) {
+        setSchedule(JSON.parse(savedSchedule));
+      }
+    } catch (e) {
+      console.warn('LocalStorage load error:', e);
+    }
+  }, []);
+
+  // Sync to localStorage
+  useEffect(() => {
+    if (!mounted) return;
+    try {
+      localStorage.setItem('dc_shift_staff_list', JSON.stringify(staffList));
+    } catch (e) {
+      console.warn('LocalStorage error:', e);
+    }
+  }, [staffList, mounted]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    try {
+      localStorage.setItem(`dc_shift_schedule_${year}_${month}`, JSON.stringify(schedule));
+    } catch (e) {
+      console.warn('LocalStorage error:', e);
+    }
+  }, [schedule, year, month, mounted]);
+
+  // Handle month / year change
+  useEffect(() => {
+    if (!mounted) return;
+    try {
+      const saved = localStorage.getItem(`dc_shift_schedule_${year}_${month}`);
+      if (saved) {
+        setSchedule(JSON.parse(saved));
+        return;
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    if (month === 10 && year === 2026) {
+      setSchedule(INITIAL_OCTOBER_ROSTER);
+    } else {
+      // Initialize fresh for new month
+      const fresh = {};
+      staffList.forEach(s => {
+        fresh[s.id] = new Array(daysCount).fill('H');
+      });
+      setSchedule(fresh);
+    }
+  }, [year, month, daysCount, mounted]);
+
+  // Calculations
+  const dailyCoverage = useMemo(() => {
+    return calculateDailyCoverage(schedule, staffList, daysCount, settings);
+  }, [schedule, staffList, daysCount, settings]);
+
+  const violationsMap = useMemo(() => {
+    return checkComplianceViolations(schedule, staffList, daysCount);
+  }, [schedule, staffList, daysCount]);
+
+  const totalShiftsCount = useMemo(() => {
+    let count = 0;
+    Object.values(schedule).forEach(shifts => {
+      shifts?.forEach(c => {
+        if (c === '1' || c === '2' || c === '3' || c === 'A') count++;
+      });
+    });
+    return count;
+  }, [schedule]);
+
+  // Cell Change Handler
+  const handleCellChange = (staffId, dayIndex, newShift) => {
+    setSchedule(prev => {
+      const currentStaffShifts = prev[staffId] ? [...prev[staffId]] : new Array(daysCount).fill('H');
+      while (currentStaffShifts.length < daysCount) {
+        currentStaffShifts.push('H');
+      }
+      currentStaffShifts[dayIndex] = newShift;
+      return {
+        ...prev,
+        [staffId]: currentStaffShifts
+      };
+    });
+  };
+
+  // Batch Fill
+  const handleBatchApply = (staffId, startDay, endDay, shiftCode) => {
+    setSchedule(prev => {
+      const current = prev[staffId] ? [...prev[staffId]] : new Array(daysCount).fill('H');
+      for (let d = startDay; d <= endDay; d++) {
+        current[d] = shiftCode;
+      }
+      return {
+        ...prev,
+        [staffId]: current
+      };
+    });
+  };
+
+  // Shift Swap Handler
+  const handleConfirmSwap = ({ staffAId, dayA, shiftA, staffBId, dayB, shiftB }) => {
+    setSchedule(prev => {
+      const nextA = prev[staffAId] ? [...prev[staffAId]] : new Array(daysCount).fill('H');
+      const nextB = prev[staffBId] ? [...prev[staffBId]] : new Array(daysCount).fill('H');
+
+      nextA[dayA] = shiftB;
+      nextB[dayB] = shiftA;
+
+      return {
+        ...prev,
+        [staffAId]: nextA,
+        [staffBId]: nextB
+      };
+    });
+  };
+
+  // Auto Schedule Generator
+  const handleAutoSchedule = ({ minPerShift }) => {
+    try {
+      const generated = generateAutoSchedule({
+        staffList,
+        daysCount,
+        year,
+        month,
+        minPerShift
+      });
+      setSchedule(generated);
+    } catch (err) {
+      alert(err.message || 'ไม่สามารถจัดกะอัตโนมัติได้');
+    }
+  };
+
+  // Export to Excel
+  const handleExportExcel = () => {
+    exportRosterToExcel({
+      schedule,
+      staffList,
+      year,
+      month,
+      daysCount
+    });
+  };
+
+  // Reset to default
+  const handleResetDefault = () => {
+    if (confirm('คุณต้องการรีเซ็ตตารางกะกลับเป็นค่าเริ่มต้นตามเอกสารภาพตัวอย่างหรือไม่?')) {
+      setYear(2026);
+      setMonth(10);
+      setStaffList(INITIAL_STAFF);
+      setSchedule(INITIAL_OCTOBER_ROSTER);
+      try {
+        localStorage.removeItem('dc_shift_staff_list');
+        localStorage.removeItem('dc_shift_schedule_2026_10');
+      } catch (e) {
+        // ignore
+      }
+    }
+  };
+
+  // Staff CRUD
+  const handleAddStaff = (newStaffData) => {
+    const newId = Date.now();
+    const created = {
+      id: newId,
+      empCode: `DC-0${staffList.length + 1}`,
+      name: newStaffData.name,
+      position: newStaffData.position,
+      phone: newStaffData.phone
+    };
+    setStaffList(prev => [...prev, created]);
+    setSchedule(prev => ({
+      ...prev,
+      [newId]: new Array(daysCount).fill('H')
+    }));
+  };
+
+  const handleUpdateStaff = (id, updatedData) => {
+    setStaffList(prev => prev.map(s => s.id === id ? { ...s, ...updatedData } : s));
+  };
+
+  const handleDeleteStaff = (id) => {
+    if (staffList.length <= 3) {
+      alert('ศูนย์ข้อมูลจำเป็นต้องมีเจ้าหน้าที่อย่างน้อย 3 คน');
+      return;
+    }
+    setStaffList(prev => prev.filter(s => s.id !== id));
+    setSchedule(prev => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  };
+
+  return (
+    <div className="app-container">
+      {/* Top Header Navigation */}
+      <Header
+        year={year}
+        setYear={setYear}
+        month={month}
+        setMonth={setMonth}
+        theme={theme}
+        setTheme={setTheme}
+        onOpenAutoSchedule={() => setIsAutoScheduleOpen(true)}
+        onOpenSwap={() => setIsSwapOpen(true)}
+        onOpenAnalytics={() => setIsAnalyticsOpen(true)}
+        onOpenStaff={() => setIsStaffOpen(true)}
+        onExportExcel={handleExportExcel}
+        onPrint={() => window.print()}
+        onResetDefault={handleResetDefault}
+      />
+
+      {/* Real-time Status / KPI Bar */}
+      <TopMetricsBar
+        staffList={staffList}
+        dailyCoverage={dailyCoverage}
+        violationsMap={violationsMap}
+        totalShiftsCount={totalShiftsCount}
+        daysCount={daysCount}
+      />
+
+      {/* Main Workspace */}
+      <main className="main-content">
+        {/* Shift Legend & Brush Tool */}
+        <ShiftLegend
+          activeBrush={activeBrush}
+          setActiveBrush={setActiveBrush}
+        />
+
+        {/* Interactive Shift Roster Grid */}
+        <ShiftTable
+          year={year}
+          month={month}
+          daysCount={daysCount}
+          staffList={staffList}
+          schedule={schedule}
+          dailyCoverage={dailyCoverage}
+          violationsMap={violationsMap}
+          activeBrush={activeBrush}
+          onCellChange={handleCellChange}
+          onOpenShiftPicker={(staffId, dayIndex) => setPickerTarget({ staffId, dayIndex })}
+          onOpenStaffModal={() => setIsStaffOpen(true)}
+        />
+      </main>
+
+      {/* Modals */}
+      <ShiftPickerModal
+        isOpen={!!pickerTarget}
+        onClose={() => setPickerTarget(null)}
+        target={pickerTarget}
+        staffList={staffList}
+        schedule={schedule}
+        year={year}
+        month={month}
+        daysCount={daysCount}
+        onSelectShift={handleCellChange}
+        onBatchApply={handleBatchApply}
+      />
+
+      <ShiftSwapModal
+        isOpen={isSwapOpen}
+        onClose={() => setIsSwapOpen(false)}
+        staffList={staffList}
+        schedule={schedule}
+        daysCount={daysCount}
+        month={month}
+        year={year}
+        onConfirmSwap={handleConfirmSwap}
+      />
+
+      <AnalyticsModal
+        isOpen={isAnalyticsOpen}
+        onClose={() => setIsAnalyticsOpen(false)}
+        staffList={staffList}
+        schedule={schedule}
+        daysCount={daysCount}
+        year={year}
+        month={month}
+        settings={settings}
+      />
+
+      <AutoScheduleModal
+        isOpen={isAutoScheduleOpen}
+        onClose={() => setIsAutoScheduleOpen(false)}
+        onGenerateSchedule={handleAutoSchedule}
+        defaultMinStaff={settings.minStaffPerShift}
+      />
+
+      <StaffModal
+        isOpen={isStaffOpen}
+        onClose={() => setIsStaffOpen(false)}
+        staffList={staffList}
+        onAddStaff={handleAddStaff}
+        onUpdateStaff={handleUpdateStaff}
+        onDeleteStaff={handleDeleteStaff}
+      />
+    </div>
+  );
+}
