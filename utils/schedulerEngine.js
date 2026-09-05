@@ -1,4 +1,4 @@
-import { SHIFT_TYPES, DC_SETTINGS_DEFAULT } from '../data/initialData';
+import { SHIFT_TYPES, DC_SETTINGS_DEFAULT } from '../data/initialData.js';
 
 /**
  * Get days in a given month and year
