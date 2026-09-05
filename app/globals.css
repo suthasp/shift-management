@@ -503,12 +503,12 @@ body {
   position: sticky;
   left: 44px;
   z-index: 10;
-  width: 220px;
-  min-width: 220px;
-  max-width: 220px;
+  width: 150px;
+  min-width: 150px;
+  max-width: 150px;
   background: var(--bg-surface);
   text-align: left;
-  padding: 0.4rem 0.85rem;
+  padding: 0.4rem 0.6rem;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;

@@ -159,7 +159,7 @@ export function ShiftTable({
           {/* Explicit column widths to prevent sticky columns from overlapping day 1 */}
           <colgroup>
             <col style={{ width: 44 }} /> {/* # */}
-            <col style={{ width: 220 }} /> {/* ชื่อเจ้าหน้าที่ */}
+            <col style={{ width: 150 }} /> {/* ชื่อเจ้าหน้าที่ */}
             {Array.from({ length: daysCount }, (_, i) => (
               <col key={`col-day-${i}`} style={{ width: 38 }} />
             ))}

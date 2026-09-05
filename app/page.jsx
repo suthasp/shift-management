@@ -30,9 +30,9 @@ export default function Home() {
   // Theme state
   const [theme, setTheme] = useState('dark');
 
-  // Month & Year state (Defaults to October 2026 to match image exactly)
-  const [year, setYear] = useState(2026);
-  const [month, setMonth] = useState(10); // 10 = October
+  // Month & Year state (Defaults to current month/year)
+  const [year, setYear] = useState(() => new Date().getFullYear());
+  const [month, setMonth] = useState(() => new Date().getMonth() + 1); // 1-12
 
   const daysCount = useMemo(() => getDaysInMonth(year, month), [year, month]);
 
