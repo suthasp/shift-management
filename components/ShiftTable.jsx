@@ -270,12 +270,7 @@ export function ShiftTable({
                     className="col-sticky-name" 
                     title={`${staff.name} (${staff.position})`}
                   >
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontWeight: 600 }}>{staff.name}</span>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                        {staff.position}
-                      </span>
-                    </div>
+                    {staff.name}
                   </td>
 
                   {/* Shift Cells for Days 1..N */}
