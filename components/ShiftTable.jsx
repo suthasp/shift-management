@@ -155,7 +155,20 @@ export function ShiftTable({
         onScroll={handleScroll}
         className="roster-table-wrapper"
       >
-        <table className="roster-table">
+        <table className="roster-table" style={{ tableLayout: 'fixed', width: 'auto' }}>
+          {/* Explicit column widths to prevent sticky columns from overlapping day 1 */}
+          <colgroup>
+            <col style={{ width: 44 }} /> {/* # */}
+            <col style={{ width: 220 }} /> {/* ชื่อเจ้าหน้าที่ */}
+            {Array.from({ length: daysCount }, (_, i) => (
+              <col key={`col-day-${i}`} style={{ width: 38 }} />
+            ))}
+            <col style={{ width: 52 }} /> {/* สรุป 1 */}
+            <col style={{ width: 52 }} /> {/* สรุป 2 */}
+            <col style={{ width: 52 }} /> {/* สรุป 3 */}
+            <col style={{ width: 52 }} /> {/* สรุป H */}
+            <col style={{ width: 60 }} /> {/* สรุป ชม. */}
+          </colgroup>
           <thead>
             {/* Row 1: 8Hrs./Shift & Month Name Banner */}
             <tr>
