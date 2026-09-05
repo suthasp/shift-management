@@ -30,7 +30,7 @@ export function ShiftLegend({ activeBrush, setActiveBrush }) {
                 cursor: 'pointer'
               }}
               onClick={() => setActiveBrush(isBrushActive ? null : code)}
-              title={isBrushActive ? 'คลิกเพื่อยกเลิกพู่กันเทสี' : `คลิกเพื่อใช้พู่กันลงกะ ${code} ทันทีเมื่อคลิกช่อง`}
+              title={`${shift.name}\n⏰ เวลาปฏิบัติงาน: ${shift.timeRange} น. (${shift.durationHours} ชม.)\n📝 ${shift.description}\n\n${isBrushActive ? '👉 คลิกเพื่อยกเลิกพู่กันเทสี' : '👉 คลิกเพื่อเลือกใช้พู่กันเทสีกะนี้'}`}
             >
               <span className={`shift-tag tag-${code.toLowerCase()}`}>
                 {code}

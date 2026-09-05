@@ -23,8 +23,18 @@ export function ShiftTable({
 }) {
   const [selectedCell, setSelectedCell] = useState(null); // { staffId, dayIndex }
   const [isScrolled, setIsScrolled] = useState(false);
+  const [hoveredShiftInfo, setHoveredShiftInfo] = useState(null);
   const wrapperRef = useRef(null);
   const monthNameEng = new Date(year, month - 1, 1).toLocaleString('en-US', { month: 'long' });
+
+  const handleHoverShift = (code, e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setHoveredShiftInfo({ code, rect });
+  };
+
+  const handleLeaveShift = () => {
+    setHoveredShiftInfo(null);
+  };
 
   // Force scroll to Day 1 on mount AND whenever month/year changes
   // Uses triple-layer reset: immediate, rAF, and timeout to defeat browser scroll restoration
@@ -147,6 +157,44 @@ export function ShiftTable({
           <ArrowLeft size={14} />
           <span>กลับไปวันที่ 1</span>
         </button>
+      )}
+
+      {/* Floating Shift Info Tooltip on Hover */}
+      {hoveredShiftInfo && SHIFT_TYPES[hoveredShiftInfo.code] && (
+        <div
+          className="shift-info-tooltip"
+          style={{
+            position: 'fixed',
+            left: Math.max(10, Math.min(typeof window !== 'undefined' ? window.innerWidth - 300 : 200, (hoveredShiftInfo.rect?.right || 200) + 12)),
+            top: Math.max(10, Math.min(typeof window !== 'undefined' ? window.innerHeight - 200 : 200, (hoveredShiftInfo.rect?.top || 100) - 20)),
+            zIndex: 99999
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <span className={`shift-tag tag-${hoveredShiftInfo.code.toLowerCase()}`} style={{ width: 22, height: 22, fontSize: '0.8rem' }}>
+              {hoveredShiftInfo.code}
+            </span>
+            <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+              {SHIFT_TYPES[hoveredShiftInfo.code].name}
+            </strong>
+          </div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--accent-cyan)', fontWeight: 600, marginBottom: 4 }}>
+            ⏰ เวลา: {SHIFT_TYPES[hoveredShiftInfo.code].timeRange} น. ({SHIFT_TYPES[hoveredShiftInfo.code].durationHours} ชม.)
+          </div>
+          {hoveredShiftInfo.code === 'A' && (
+            <div style={{ fontSize: '0.78rem', color: '#ffb74d', marginBottom: 4 }}>
+              👤 เจ้าหน้าที่: ธีระกิจ & วรพงษ์ (จันทร์ - ศุกร์)
+            </div>
+          )}
+          {['1', '2', '3'].includes(hoveredShiftInfo.code) && (
+            <div style={{ fontSize: '0.78rem', color: 'var(--accent-emerald)', marginBottom: 4 }}>
+              🎯 เป้าหมาย 7x24: {hoveredShiftInfo.code === '1' ? 'อย่างน้อย 1 คน' : 'อย่างน้อย 2 คน'} ต่อกะ
+            </div>
+          )}
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4, borderTop: '1px solid var(--border-color)', paddingTop: 6, marginTop: 4 }}>
+            {SHIFT_TYPES[hoveredShiftInfo.code].description}
+          </div>
+        </div>
       )}
 
       <div 
@@ -323,7 +371,12 @@ export function ShiftTable({
             {/* Row for Shift A */}
             <tr className="tr-coverage-row">
               <td className="col-sticky-num"></td>
-              <td className="col-sticky-name coverage-label-cell">
+              <td 
+                className="col-sticky-name coverage-label-cell"
+                title={`กะปกติ (Shift A)\n⏰ เวลา: 08:00 - 17:00 น. (8 ชม.)\n👤 เจ้าหน้าที่: ธีระกิจ & วรพงษ์ (จันทร์ - ศุกร์)\n📝 หน้าที่: ${SHIFT_TYPES['A']?.description || ''}`}
+                onMouseEnter={(e) => handleHoverShift('A', e)}
+                onMouseLeave={handleLeaveShift}
+              >
                 <span className="shift-tag tag-a" style={{ width: 20, height: 20, fontSize: '0.75rem', marginRight: 6 }}>A</span>
                 <span>กะปกติ (08:00 - 17:00)</span>
               </td>
@@ -351,7 +404,12 @@ export function ShiftTable({
             {/* Row for Shift 1 */}
             <tr className="tr-coverage-row">
               <td className="col-sticky-num"></td>
-              <td className="col-sticky-name coverage-label-cell">
+              <td 
+                className="col-sticky-name coverage-label-cell"
+                title={`กะเช้า (Shift 1)\n⏰ เวลา: 07:00 - 16:00 น. (8 ชม. / มี Overlap ส่งมอบกะ 1 ชม.)\n🎯 เป้าหมาย 7x24: อย่างน้อย 1 คนต่อกะ\n📝 หน้าที่: ${SHIFT_TYPES['1']?.description || ''}`}
+                onMouseEnter={(e) => handleHoverShift('1', e)}
+                onMouseLeave={handleLeaveShift}
+              >
                 <span className="shift-tag tag-1" style={{ width: 20, height: 20, fontSize: '0.75rem', marginRight: 6 }}>1</span>
                 <span>กะเช้า (07:00 - 16:00)</span>
               </td>
@@ -376,7 +434,12 @@ export function ShiftTable({
             {/* Row for Shift 2 */}
             <tr className="tr-coverage-row">
               <td className="col-sticky-num"></td>
-              <td className="col-sticky-name coverage-label-cell">
+              <td 
+                className="col-sticky-name coverage-label-cell"
+                title={`กะบ่าย (Shift 2)\n⏰ เวลา: 15:00 - 24:00 น. (8 ชม. / มี Overlap ส่งมอบกะ 1 ชม.)\n🎯 เป้าหมาย 7x24: อย่างน้อย 2 คนต่อกะ\n📝 หน้าที่: ${SHIFT_TYPES['2']?.description || ''}`}
+                onMouseEnter={(e) => handleHoverShift('2', e)}
+                onMouseLeave={handleLeaveShift}
+              >
                 <span className="shift-tag tag-2" style={{ width: 20, height: 20, fontSize: '0.75rem', marginRight: 6 }}>2</span>
                 <span>กะบ่าย (15:00 - 24:00)</span>
               </td>
@@ -402,7 +465,12 @@ export function ShiftTable({
             {/* Row for Shift 3 */}
             <tr className="tr-coverage-row">
               <td className="col-sticky-num"></td>
-              <td className="col-sticky-name coverage-label-cell">
+              <td 
+                className="col-sticky-name coverage-label-cell"
+                title={`กะดึก (Shift 3)\n⏰ เวลา: 23:00 - 08:00 น. (8 ชม. / มี Overlap ส่งมอบกะ 1 ชม.)\n🎯 เป้าหมาย 7x24: อย่างน้อย 2 คนต่อกะ (มีเบี้ยเลี้ยงกะดึก)\n📝 หน้าที่: ${SHIFT_TYPES['3']?.description || ''}`}
+                onMouseEnter={(e) => handleHoverShift('3', e)}
+                onMouseLeave={handleLeaveShift}
+              >
                 <span className="shift-tag tag-3" style={{ width: 20, height: 20, fontSize: '0.75rem', marginRight: 6 }}>3</span>
                 <span>กะดึก (23:00 - 08:00)</span>
               </td>
@@ -428,7 +496,12 @@ export function ShiftTable({
             {/* Row for Day Off H */}
             <tr className="tr-coverage-row">
               <td className="col-sticky-num"></td>
-              <td className="col-sticky-name coverage-label-cell">
+              <td 
+                className="col-sticky-name coverage-label-cell"
+                title={`วันหยุด (Shift H)\n⏰ เวลา: พักผ่อน (Day Off)\n📝 รายละเอียด: ${SHIFT_TYPES['H']?.description || 'วันหยุดประจำสัปดาห์ / วันหยุดชดเชย'}`}
+                onMouseEnter={(e) => handleHoverShift('H', e)}
+                onMouseLeave={handleLeaveShift}
+              >
                 <span className="shift-tag tag-h" style={{ width: 20, height: 20, fontSize: '0.75rem', marginRight: 6 }}>H</span>
                 <span>วันหยุด (Day Off)</span>
               </td>
