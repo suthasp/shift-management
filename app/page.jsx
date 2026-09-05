@@ -112,14 +112,26 @@ export default function Home() {
     if (month === 10 && year === 2026) {
       setSchedule(INITIAL_OCTOBER_ROSTER);
     } else {
-      // Initialize fresh for new month
-      const fresh = {};
-      staffList.forEach(s => {
-        fresh[s.id] = new Array(daysCount).fill('H');
-      });
-      setSchedule(fresh);
+      // Auto-generate standard 7x24 schedule starting from Day 1 for selected month
+      try {
+        const auto = generateAutoSchedule({
+          staffList,
+          daysCount,
+          year,
+          month,
+          minPerShift: settings.minStaffPerShift,
+          fixStaffA: true
+        });
+        setSchedule(auto);
+      } catch (err) {
+        const fresh = {};
+        staffList.forEach(s => {
+          fresh[s.id] = new Array(daysCount).fill('H');
+        });
+        setSchedule(fresh);
+      }
     }
-  }, [year, month, daysCount, mounted]);
+  }, [year, month, daysCount, mounted, settings]);
 
   // Calculations
   const dailyCoverage = useMemo(() => {

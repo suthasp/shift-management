@@ -425,11 +425,39 @@ body {
   position: relative;
 }
 
+/* Quick Jump to Day 1 button */
+.btn-jump-day1 {
+  position: absolute;
+  top: 8px;
+  right: 14px;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #00e5ff 0%, #00b0ff 100%);
+  color: #022c36;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 229, 255, 0.4);
+  animation: fadeIn 0.2s ease-out;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-jump-day1:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 229, 255, 0.55);
+}
+
 .roster-table-wrapper {
   overflow-x: auto;
   overflow-y: visible;
   max-width: 100%;
   position: relative;
+  scroll-behavior: smooth;
 }
 
 .roster-table {

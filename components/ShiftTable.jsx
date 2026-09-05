@@ -1,13 +1,12 @@
 'use client';
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   THAI_MONTHS, 
   THAI_DAYS_SHORT, 
   SHIFT_TYPES 
 } from '../data/initialData';
 import { getDayOfWeek, isWeekend } from '../utils/schedulerEngine';
-import { AlertCircle, Plus, Trash2 } from 'lucide-react';
+import { AlertCircle, Plus, Trash2, ArrowLeft } from 'lucide-react';
 
 export function ShiftTable({
   year,
@@ -23,7 +22,28 @@ export function ShiftTable({
   onOpenStaffModal
 }) {
   const [selectedCell, setSelectedCell] = useState(null); // { staffId, dayIndex }
+  const [isScrolled, setIsScrolled] = useState(false);
+  const wrapperRef = useRef(null);
   const monthNameEng = new Date(year, month - 1, 1).toLocaleString('en-US', { month: 'long' });
+
+  // Always reset scroll to Day 1 whenever month or year changes
+  useEffect(() => {
+    if (wrapperRef.current) {
+      wrapperRef.current.scrollLeft = 0;
+      setIsScrolled(false);
+    }
+  }, [year, month]);
+
+  const scrollToDay1 = () => {
+    if (wrapperRef.current) {
+      wrapperRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+      setIsScrolled(false);
+    }
+  };
+
+  const handleScroll = (e) => {
+    setIsScrolled(e.target.scrollLeft > 15);
+  };
 
   // Keyboard navigation & quick edit handler
   useEffect(() => {
@@ -94,8 +114,25 @@ export function ShiftTable({
   };
 
   return (
-    <div className="roster-card">
-      <div className="roster-table-wrapper" tabIndex={0}>
+    <div className="roster-card" style={{ position: 'relative' }}>
+      {/* Floating Button to jump back to Day 1 when scrolled */}
+      {isScrolled && (
+        <button 
+          className="btn-jump-day1" 
+          onClick={scrollToDay1}
+          title="เลื่อนตารางกลับไปแสดงตั้งแต่วันที่ 1"
+        >
+          <ArrowLeft size={14} />
+          <span>กลับไปวันที่ 1</span>
+        </button>
+      )}
+
+      <div 
+        key={`roster-wrapper-${year}-${month}`}
+        ref={wrapperRef}
+        onScroll={handleScroll}
+        className="roster-table-wrapper"
+      >
         <table className="roster-table">
           <thead>
             {/* Row 1: 8Hrs./Shift & Month Name Banner */}
