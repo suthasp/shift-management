@@ -8,14 +8,15 @@ export function AutoScheduleModal({
   isOpen,
   onClose,
   onGenerateSchedule,
-  defaultMinStaff = { '1': 2, '2': 2, '3': 2 }
+  defaultMinStaff = { '1': 1, '2': 2, '3': 2 }
 }) {
   if (!isOpen) return null;
 
-  const [minMorning, setMinMorning] = useState(defaultMinStaff['1'] || 2);
+  const [minMorning, setMinMorning] = useState(defaultMinStaff['1'] || 1);
   const [minAfternoon, setMinAfternoon] = useState(defaultMinStaff['2'] || 2);
   const [minNight, setMinNight] = useState(defaultMinStaff['3'] || 2);
 
+  const [fixStaffA, setFixStaffA] = useState(true);
   const [restAfterNight, setRestAfterNight] = useState(true);
   const [maxConsecutiveDays, setMaxConsecutiveDays] = useState(6);
 
@@ -26,6 +27,7 @@ export function AutoScheduleModal({
         '2': Number(minAfternoon),
         '3': Number(minNight)
       },
+      fixStaffA,
       restAfterNight,
       maxConsecutiveDays: Number(maxConsecutiveDays)
     });
@@ -117,6 +119,16 @@ export function AutoScheduleModal({
             </h4>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.82rem', cursor: 'pointer', color: 'var(--accent-cyan)' }}>
+                <input
+                  type="checkbox"
+                  checked={fixStaffA}
+                  onChange={e => setFixStaffA(e.target.checked)}
+                  style={{ accentColor: 'var(--accent-cyan)' }}
+                />
+                <strong>ธีระกิจ พรมตุ้ม & วรพงษ์ ริมสกุล ยืนประจำกะ A (จันทร์-ศุกร์)</strong>
+              </label>
+
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.82rem', cursor: 'pointer' }}>
                 <input
                   type="checkbox"

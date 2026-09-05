@@ -28,7 +28,7 @@ export function isWeekend(year, month, day) {
  */
 export function calculateDailyCoverage(schedule, staffList, daysCount, settings = DC_SETTINGS_DEFAULT) {
   const coverage = [];
-  const minStaff = settings.minStaffPerShift || { '1': 2, '2': 2, '3': 2 };
+  const minStaff = settings.minStaffPerShift || { '1': 1, '2': 2, '3': 2 };
 
   for (let d = 0; d < daysCount; d++) {
     const counts = {
@@ -209,17 +209,20 @@ export function checkComplianceViolations(schedule, staffList, daysCount) {
 /**
  * Smart Auto-Scheduler Algorithm for Data Center 24/7 Operations
  * Generates an optimal, balanced roster that fulfills coverage and respects rest days
+ * Rule: ธีระกิจ & วรพงษ์ stand on Shift A (Mon-Fri), Weekend H
+ * 7x24 Operations: Shift 1 = 1 person, Shift 2 = 2 persons, Shift 3 = 2 persons
  */
 export function generateAutoSchedule({
   staffList,
   daysCount,
   year,
   month,
-  minPerShift = { '1': 2, '2': 2, '3': 2 }
+  minPerShift = { '1': 1, '2': 2, '3': 2 },
+  fixStaffA = true
 }) {
   const staffCount = staffList.length;
-  if (staffCount < 6) {
-    throw new Error('จำเป็นต้องมีเจ้าหน้าที่อย่างน้อย 6 คนเพื่อรองรับ 3 กะตลอด 24 ชั่วโมง');
+  if (staffCount < 5) {
+    throw new Error('จำเป็นต้องมีเจ้าหน้าที่อย่างน้อย 5 คนเพื่อรองรับการจัดกะ');
   }
 
   const newSchedule = {};
@@ -227,8 +230,52 @@ export function generateAutoSchedule({
     newSchedule[s.id] = new Array(daysCount).fill('H');
   });
 
-  // Track state per employee
-  const staffState = staffList.map(s => ({
+  // Identify fixed Shift A staff (ธีระกิจ & วรพงษ์)
+  const fixedAStaff = [];
+  const rotatingStaff = [];
+
+  if (fixStaffA) {
+    staffList.forEach(s => {
+      if (s.id === 1 || s.id === 2 || s.name.includes('ธีระกิจ') || s.name.includes('วรพงษ์')) {
+        fixedAStaff.push(s);
+      } else {
+        rotatingStaff.push(s);
+      }
+    });
+  } else {
+    staffList.forEach(s => rotatingStaff.push(s));
+  }
+
+  // 1. Assign fixed Shift A staff (ธีระกิจ & วรพงษ์)
+  fixedAStaff.forEach(staff => {
+    for (let d = 0; d < daysCount; d++) {
+      const dayNum = d + 1;
+      const isWknd = isWeekend(year, month, dayNum);
+      // Weekdays = Shift A (08:00 - 17:00), Weekends = Day Off (H)
+      newSchedule[staff.id][d] = isWknd ? 'H' : 'A';
+    }
+  });
+
+  // 2. If exactly 7 rotating operators and standard requirements (1x[1], 2x[2], 2x[3])
+  // use the mathematically optimal 7x24 rotating shift cycle
+  const req1 = minPerShift['1'] ?? 1;
+  const req2 = minPerShift['2'] ?? 2;
+  const req3 = minPerShift['3'] ?? 2;
+
+  if (rotatingStaff.length === 7 && req1 === 1 && req2 === 2 && req3 === 2) {
+    // Pattern: 1 -> 2 -> 2 -> 3 -> 3 -> H -> H
+    // 2 consecutive night shifts followed by 2 consecutive rest days, zero fatigue violations!
+    const cycle = ['1', '2', '2', '3', '3', 'H', 'H'];
+    rotatingStaff.forEach((staff, sIdx) => {
+      for (let d = 0; d < daysCount; d++) {
+        newSchedule[staff.id][d] = cycle[(d + sIdx) % 7];
+      }
+    });
+    return newSchedule;
+  }
+
+  // Fallback: Dynamic constraint scheduler for custom team sizes or requirements
+  const staffState = rotatingStaff.map(s => ({
     id: s.id,
     consecutiveWork: 0,
     consecutiveNights: 0,
@@ -238,29 +285,20 @@ export function generateAutoSchedule({
   }));
 
   for (let d = 0; d < daysCount; d++) {
-    // Required slots for today
     const needed = {
-      '3': minPerShift['3'] || 2, // Assign Night first (hardest constraint)
-      '2': minPerShift['2'] || 2, // Assign Afternoon
-      '1': minPerShift['1'] || 2  // Assign Morning
+      '3': req3,
+      '2': req2,
+      '1': req1
     };
 
-    // Score available employees for each shift
-    // For Night shift: Avoid someone who worked Shift 1 or 2 with low rest, or someone who already did 3 nights
-    const availableStaff = [...staffState].sort((a, b) => {
-      // Prioritize staff with fewer total work days to balance workload
-      return a.totalWorkDays - b.totalWorkDays;
-    });
-
+    const availableStaff = [...staffState].sort((a, b) => a.totalWorkDays - b.totalWorkDays);
     const assignedToday = new Set();
 
-    // 1. Assign Night Shifts (3)
+    // Night (3)
     let nightAssigned = 0;
     for (const staff of availableStaff) {
       if (nightAssigned >= needed['3']) break;
       if (assignedToday.has(staff.id)) continue;
-
-      // Cannot assign night if already 3 consecutive nights or 6 consecutive days
       if (staff.consecutiveNights >= 3 || staff.consecutiveWork >= 6) continue;
 
       newSchedule[staff.id][d] = '3';
@@ -273,13 +311,11 @@ export function generateAutoSchedule({
       nightAssigned++;
     }
 
-    // 2. Assign Afternoon Shifts (2)
+    // Afternoon (2)
     let afternoonAssigned = 0;
     for (const staff of availableStaff) {
       if (afternoonAssigned >= needed['2']) break;
       if (assignedToday.has(staff.id)) continue;
-
-      // After night shift, MUST have rest day (cannot do 2 next day without sleep)
       if (staff.lastShift === '3') continue;
       if (staff.consecutiveWork >= 6) continue;
 
@@ -292,13 +328,11 @@ export function generateAutoSchedule({
       afternoonAssigned++;
     }
 
-    // 3. Assign Morning Shifts (1)
+    // Morning (1)
     let morningAssigned = 0;
     for (const staff of availableStaff) {
       if (morningAssigned >= needed['1']) break;
       if (assignedToday.has(staff.id)) continue;
-
-      // After night shift (3), STRICTLY CANNOT work morning shift (1)
       if (staff.lastShift === '3') continue;
       if (staff.consecutiveWork >= 6) continue;
 
@@ -311,7 +345,7 @@ export function generateAutoSchedule({
       morningAssigned++;
     }
 
-    // 4. Remaining staff get Day Off ('H')
+    // Day Off (H)
     for (const staff of staffState) {
       if (!assignedToday.has(staff.id)) {
         newSchedule[staff.id][d] = 'H';

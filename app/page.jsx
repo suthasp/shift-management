@@ -183,14 +183,15 @@ export default function Home() {
   };
 
   // Auto Schedule Generator
-  const handleAutoSchedule = ({ minPerShift }) => {
+  const handleAutoSchedule = ({ minPerShift, fixStaffA }) => {
     try {
       const generated = generateAutoSchedule({
         staffList,
         daysCount,
         year,
         month,
-        minPerShift
+        minPerShift,
+        fixStaffA
       });
       setSchedule(generated);
     } catch (err) {

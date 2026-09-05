@@ -247,6 +247,34 @@ export function ShiftTable({
 
           {/* Bottom Coverage Summary */}
           <tfoot>
+            {/* Row for Shift A */}
+            <tr className="tr-coverage-row">
+              <td className="col-sticky-num"></td>
+              <td className="col-sticky-name coverage-label-cell">
+                <span className="shift-tag tag-a" style={{ width: 20, height: 20, fontSize: '0.75rem', marginRight: 6 }}>A</span>
+                <span>กะปกติ (08:00 - 17:00)</span>
+              </td>
+              {dailyCoverage.map((dayCov, d) => {
+                const count = dayCov.counts['A'];
+                const dow = getDayOfWeek(year, month, d + 1);
+                const isWknd = dow === 0 || dow === 6;
+                const isTargetMet = isWknd ? count === 0 : count >= 2;
+                return (
+                  <td 
+                    key={`cov-a-${d}`} 
+                    className={`coverage-cell ${!isWknd && count < 2 ? 'coverage-warning' : 'coverage-ok'}`}
+                    style={{ color: '#ffb74d' }}
+                    title={`วันที่ ${d + 1}: กะ A มี ${count} คน (ธีระกิจ & วรพงษ์)`}
+                  >
+                    {count}
+                  </td>
+                );
+              })}
+              <td colSpan={5} className="col-summary-cell" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                ธีระกิจ & วรพงษ์ (จ.-ศ.)
+              </td>
+            </tr>
+
             {/* Row for Shift 1 */}
             <tr className="tr-coverage-row">
               <td className="col-sticky-num"></td>
@@ -257,19 +285,18 @@ export function ShiftTable({
               {dailyCoverage.map((dayCov, d) => {
                 const count = dayCov.counts['1'];
                 const isZero = count === 0;
-                const isLow = count < 2;
                 return (
                   <td 
                     key={`cov-1-${d}`} 
-                    className={`coverage-cell ${isZero ? 'coverage-danger' : isLow ? 'coverage-warning' : 'coverage-ok'}`}
-                    title={`วันที่ ${d + 1}: กะเช้ามี ${count} คน ${isZero ? '(ขาดคน!)' : ''}`}
+                    className={`coverage-cell ${isZero ? 'coverage-danger' : 'coverage-ok'}`}
+                    title={`วันที่ ${d + 1}: กะเช้ามี ${count} คน (เป้าหมาย 1 คน)`}
                   >
                     {count}
                   </td>
                 );
               })}
               <td colSpan={5} className="col-summary-cell" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                เป้าหมาย: กะละ 2 คนขึ้นไป
+                เป้าหมาย 7x24: 1 คน
               </td>
             </tr>
 
@@ -288,14 +315,14 @@ export function ShiftTable({
                   <td 
                     key={`cov-2-${d}`} 
                     className={`coverage-cell ${isZero ? 'coverage-danger' : isLow ? 'coverage-warning' : 'coverage-ok'}`}
-                    title={`วันที่ ${d + 1}: กะบ่ายมี ${count} คน ${isZero ? '(ขาดคน!)' : ''}`}
+                    title={`วันที่ ${d + 1}: กะบ่ายมี ${count} คน (เป้าหมาย 2 คน)`}
                   >
                     {count}
                   </td>
                 );
               })}
               <td colSpan={5} className="col-summary-cell" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                ตลอด 24/7 ไม่มีวันหยุด
+                เป้าหมาย 7x24: 2 คน
               </td>
             </tr>
 
@@ -314,13 +341,15 @@ export function ShiftTable({
                   <td 
                     key={`cov-3-${d}`} 
                     className={`coverage-cell ${isZero ? 'coverage-danger' : isLow ? 'coverage-warning' : 'coverage-ok'}`}
-                    title={`วันที่ ${d + 1}: กะดึกมี ${count} คน ${isZero ? '(ขาดคน!)' : ''}`}
+                    title={`วันที่ ${d + 1}: กะดึกมี ${count} คน (เป้าหมาย 2 คน)`}
                   >
                     {count}
                   </td>
                 );
               })}
-              <td colSpan={5} className="col-summary-cell"></td>
+              <td colSpan={5} className="col-summary-cell" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                เป้าหมาย 7x24: 2 คน
+              </td>
             </tr>
 
             {/* Row for Day Off H */}
