@@ -142,12 +142,8 @@ export async function exportRosterToExcel({ schedule, staffList, year, month, da
       // Sunday = Red
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDC2626' } };
       cell.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FFFFFFFF' } };
-    } else if (dow === 1 || dow === 2) {
-      // Mon / Tue = Orange
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF97316' } };
-      cell.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FFFFFFFF' } };
     } else {
-      // Wed, Thu, Fri = Soft Slate
+      // Weekdays (Mon - Fri) = Soft Slate
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
       cell.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FF334155' } };
     }

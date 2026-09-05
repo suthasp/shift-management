@@ -533,11 +533,7 @@ th.col-sticky-name {
   font-weight: 700;
 }
 
-.dow-mon-tue {
-  background: #f97316 !important;
-  color: #ffffff !important;
-  font-weight: 700;
-}
+
 
 /* Day Number Row */
 .day-num-cell {

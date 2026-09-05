@@ -90,7 +90,6 @@ export function ShiftTable({
   const getDowBadgeClass = (dow) => {
     if (dow === 6) return 'dow-sat'; // Saturday = Purple
     if (dow === 0) return 'dow-sun'; // Sunday = Red
-    if (dow === 1 || dow === 2) return 'dow-mon-tue'; // Mon/Tue = Orange
     return '';
   };
 
