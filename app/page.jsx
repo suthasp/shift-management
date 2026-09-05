@@ -24,6 +24,37 @@ import { AnalyticsModal } from '../components/AnalyticsModal';
 import { AutoScheduleModal } from '../components/AutoScheduleModal';
 import { StaffModal } from '../components/StaffModal';
 
+// Helper to safely get roster for any month
+function getInitialRoster(yr, mo, staff = INITIAL_STAFF, setts = DC_SETTINGS_DEFAULT) {
+  const days = getDaysInMonth(yr, mo);
+  if (yr === 2026 && mo === 10) {
+    return INITIAL_OCTOBER_ROSTER;
+  }
+  try {
+    return generateAutoSchedule({
+      staffList: staff,
+      daysCount: days,
+      year: yr,
+      month: mo,
+      minPerShift: setts.minStaffPerShift,
+      fixStaffA: true
+    });
+  } catch {
+    const fresh = {};
+    staff.forEach(s => {
+      fresh[s.id] = new Array(days).fill('H');
+    });
+    return fresh;
+  }
+}
+
+function isValidSchedule(sch, expectedDays) {
+  if (!sch || typeof sch !== 'object') return false;
+  const entries = Object.entries(sch);
+  if (entries.length === 0) return false;
+  return entries.every(([_, arr]) => Array.isArray(arr) && arr.length === expectedDays);
+}
+
 export default function Home() {
   const [mounted, setMounted] = useState(false);
 
@@ -39,14 +70,19 @@ export default function Home() {
   // Staff list state (persisted in localStorage or default)
   const [staffList, setStaffList] = useState(INITIAL_STAFF);
 
+  // Settings
+  const [settings, setSettings] = useState(DC_SETTINGS_DEFAULT);
+
   // Schedule state (Key: staffId -> Array of shifts length = daysCount)
-  const [schedule, setSchedule] = useState(INITIAL_OCTOBER_ROSTER);
+  const [schedule, setSchedule] = useState(() => {
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth() + 1;
+    return getInitialRoster(curYear, curMonth, INITIAL_STAFF, DC_SETTINGS_DEFAULT);
+  });
 
   // Active paint brush for quick stamp
   const [activeBrush, setActiveBrush] = useState(null);
-
-  // Settings
-  const [settings, setSettings] = useState(DC_SETTINGS_DEFAULT);
 
   // Modals state
   const [isAutoScheduleOpen, setIsAutoScheduleOpen] = useState(false);
@@ -68,13 +104,23 @@ export default function Home() {
         setTheme(savedTheme);
         document.documentElement.setAttribute('data-theme', savedTheme);
       }
+      let currentStaff = INITIAL_STAFF;
       const savedStaff = localStorage.getItem('dc_shift_staff_list');
       if (savedStaff) {
-        setStaffList(JSON.parse(savedStaff));
+        currentStaff = JSON.parse(savedStaff);
+        setStaffList(currentStaff);
       }
       const savedSchedule = localStorage.getItem(`dc_shift_schedule_${year}_${month}`);
       if (savedSchedule) {
-        setSchedule(JSON.parse(savedSchedule));
+        const parsed = JSON.parse(savedSchedule);
+        if (isValidSchedule(parsed, daysCount)) {
+          setSchedule(parsed);
+        } else {
+          localStorage.removeItem(`dc_shift_schedule_${year}_${month}`);
+          setSchedule(getInitialRoster(year, month, currentStaff, settings));
+        }
+      } else {
+        setSchedule(getInitialRoster(year, month, currentStaff, settings));
       }
     } catch (e) {
       console.warn('LocalStorage load error:', e);
@@ -93,12 +139,13 @@ export default function Home() {
 
   useEffect(() => {
     if (!mounted) return;
+    if (!isValidSchedule(schedule, daysCount)) return;
     try {
       localStorage.setItem(`dc_shift_schedule_${year}_${month}`, JSON.stringify(schedule));
     } catch (e) {
       console.warn('LocalStorage error:', e);
     }
-  }, [schedule, year, month, mounted]);
+  }, [schedule, year, month, daysCount, mounted]);
 
   // Handle month / year change
   useEffect(() => {
@@ -106,35 +153,19 @@ export default function Home() {
     try {
       const saved = localStorage.getItem(`dc_shift_schedule_${year}_${month}`);
       if (saved) {
-        setSchedule(JSON.parse(saved));
-        return;
+        const parsed = JSON.parse(saved);
+        if (isValidSchedule(parsed, daysCount)) {
+          setSchedule(parsed);
+          return;
+        } else {
+          localStorage.removeItem(`dc_shift_schedule_${year}_${month}`);
+        }
       }
     } catch (e) {
       // ignore
     }
 
-    if (month === 10 && year === 2026) {
-      setSchedule(INITIAL_OCTOBER_ROSTER);
-    } else {
-      // Auto-generate standard 7x24 schedule starting from Day 1 for selected month
-      try {
-        const auto = generateAutoSchedule({
-          staffList,
-          daysCount,
-          year,
-          month,
-          minPerShift: settings.minStaffPerShift,
-          fixStaffA: true
-        });
-        setSchedule(auto);
-      } catch (err) {
-        const fresh = {};
-        staffList.forEach(s => {
-          fresh[s.id] = new Array(daysCount).fill('H');
-        });
-        setSchedule(fresh);
-      }
-    }
+    setSchedule(getInitialRoster(year, month, staffList, settings));
   }, [year, month, daysCount, mounted, settings]);
 
   // Calculations

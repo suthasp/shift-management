@@ -155,7 +155,14 @@ export function ShiftTable({
         onScroll={handleScroll}
         className="roster-table-wrapper"
       >
-        <table className="roster-table" style={{ tableLayout: 'fixed', width: 'auto' }}>
+        <table 
+          className="roster-table" 
+          style={{ 
+            tableLayout: 'fixed', 
+            width: 44 + 150 + (daysCount * 38) + 268, 
+            minWidth: 44 + 150 + (daysCount * 38) + 268 
+          }}
+        >
           {/* Explicit column widths to prevent sticky columns from overlapping day 1 */}
           <colgroup>
             <col style={{ width: 44 }} /> {/* # */}
