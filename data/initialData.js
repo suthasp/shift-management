@@ -89,8 +89,98 @@ export const SHIFT_TYPES = {
     isWork: false,
     isNight: false,
     description: 'ลาพักผ่อนประจำปีที่ได้รับการอนุมัติ'
+  },
+  'HT1': {
+    code: 'HT1',
+    name: 'OT กะเช้า (Norm H)',
+    timeRange: '07:00 - 16:00',
+    durationHours: 8,
+    overlapHours: 1,
+    bgColor: '#00b050',
+    textColor: '#ffffff',
+    badgeClass: 'shift-ht1',
+    isWork: true,
+    isOT: true,
+    baseShift: '1',
+    isNight: false,
+    description: 'วันหยุดปกติ (Key Norm เป็น H) แต่มาปฏิบัติงานกะเช้าเพื่อเบิก OT'
+  },
+  'HT2': {
+    code: 'HT2',
+    name: 'OT กะบ่าย (Norm H)',
+    timeRange: '15:00 - 24:00',
+    durationHours: 8,
+    overlapHours: 1,
+    bgColor: '#00b050',
+    textColor: '#ffffff',
+    badgeClass: 'shift-ht2',
+    isWork: true,
+    isOT: true,
+    baseShift: '2',
+    isNight: false,
+    description: 'วันหยุดปกติ (Key Norm เป็น H) แต่มาปฏิบัติงานกะบ่ายเพื่อเบิก OT'
+  },
+  'HT3': {
+    code: 'HT3',
+    name: 'OT กะดึก (Norm H)',
+    timeRange: '23:00 - 08:00',
+    durationHours: 8,
+    overlapHours: 1,
+    bgColor: '#00b050',
+    textColor: '#ffffff',
+    badgeClass: 'shift-ht3',
+    isWork: true,
+    isOT: true,
+    baseShift: '3',
+    isNight: true,
+    description: 'วันหยุดปกติ (Key Norm เป็น H) แต่มาปฏิบัติงานกะดึกเพื่อเบิก OT'
   }
 };
+
+export const OT_CLAIM_RULES = [
+  {
+    type: 'OT วันทำงาน',
+    condition: 'ทำงานต่อเนื่องก่อน/หลังกะปกติ (8 ชม.)',
+    rate: '1.5 แรง',
+    multiplier: 1.5,
+    description: 'ทำงานเกินเวลาในวันทำงานปกติ'
+  },
+  {
+    type: 'OT วันหยุด (ตรง NORM)',
+    condition: 'ตรงกับตารางกะปกติเดิม',
+    rate: '1 แรง',
+    multiplier: 1.0,
+    description: 'ทำงานในวันหยุดตามตารางกะปกติเดิม (เช่น HT1, HT2, HT3)'
+  },
+  {
+    type: 'OT วันหยุด (ไม่ตรง NORM)',
+    condition: 'ไม่ตรงกับตารางกะปกติเดิม',
+    rate: '3 แรง',
+    multiplier: 3.0,
+    description: 'ทำงานในวันหยุดที่ไม่ตรงกับรอบกะปกติ'
+  },
+  {
+    type: 'OT วันหยุดนักขัตฤกษ์',
+    condition: '8 ชั่วโมงแรก (กะปกติ)',
+    rate: '1 แรง',
+    multiplier: 1.0,
+    description: 'ปฏิบัติงานในวันหยุดนักขัตฤกษ์ 8 ชั่วโมงแรก'
+  },
+  {
+    type: 'OT วันหยุดนักขัตฤกษ์',
+    condition: 'ชั่วโมงถัดไป (ชั่วโมงที่ 9-11)',
+    rate: '3 แรง',
+    multiplier: 3.0,
+    description: 'ปฏิบัติงานล่วงเวลาในวันหยุดนักขัตฤกษ์ตั้งแต่ชั่วโมงที่ 9 ขึ้นไป'
+  },
+  {
+    type: 'OT วันหยุดนักขัตฤกษ์',
+    condition: 'กรณีมีการแทรกกะ',
+    rate: '1.5 แรง',
+    multiplier: 1.5,
+    description: 'กรณีแทรกกะพิเศษในวันหยุดนักขัตฤกษ์'
+  }
+];
 
 export const INITIAL_STAFF = [
   {

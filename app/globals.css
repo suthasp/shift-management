@@ -49,6 +49,10 @@
   --shift-v-bg: #2dd4bf;
   --shift-v-text: #042f2e;
 
+  --shift-ht-bg: #00b050;
+  --shift-ht-text: #ffffff;
+  --shift-ht-shadow: rgba(0, 176, 80, 0.4);
+
   /* Weekend Badges */
   --sat-badge-bg: #9333ea;
   --sun-badge-bg: #dc2626;
@@ -414,6 +418,15 @@ body {
 .tag-h { background-color: var(--shift-h-bg); color: var(--shift-h-text); }
 .tag-l { background-color: var(--shift-l-bg); color: var(--shift-l-text); }
 .tag-v { background-color: var(--shift-v-bg); color: var(--shift-v-text); }
+.tag-ht1, .tag-ht2, .tag-ht3 { 
+  background-color: var(--shift-ht-bg); 
+  color: var(--shift-ht-text); 
+  font-size: 0.72rem !important; 
+  font-weight: 800; 
+  min-width: 32px; 
+  width: auto; 
+  padding: 0 4px; 
+}
 
 /* Table Container & Sticky Matrix */
 .roster-card {
@@ -671,6 +684,15 @@ thead th.col-sticky-name,
 .cell-shift-v {
   background-color: var(--shift-v-bg);
   color: var(--shift-v-text);
+}
+
+.cell-shift-ht1,
+.cell-shift-ht2,
+.cell-shift-ht3 {
+  background-color: var(--shift-ht-bg) !important;
+  color: var(--shift-ht-text) !important;
+  font-size: 0.76rem !important;
+  font-weight: 800 !important;
 }
 
 /* Warning / Violation indicator dot */
@@ -966,6 +988,63 @@ thead th.col-sticky-name,
   font-weight: 600;
 }
 
+/* OT Claim Rules Table */
+.ot-rules-container {
+  margin-top: 1.5rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.ot-rules-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-top: 0.75rem;
+}
+
+.ot-rules-table th,
+.ot-rules-table td {
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--border-color);
+  text-align: left;
+}
+
+.ot-rules-table th {
+  background: var(--bg-surface-elevated);
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.ot-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.ot-badge-1 {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+.ot-badge-15 {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.ot-badge-3 {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
 /* Keyboard hint toast */
 .keyboard-hint {
   display: flex;
@@ -1025,4 +1104,5 @@ thead th.col-sticky-name,
   .cell-shift-3 { background-color: #ffb2dd !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .cell-shift-a { background-color: #ffb74d !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .cell-shift-h { background-color: #ffeb3b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .cell-shift-ht1, .cell-shift-ht2, .cell-shift-ht3 { background-color: #00b050 !important; color: #ffffff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }

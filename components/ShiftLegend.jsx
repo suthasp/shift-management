@@ -5,7 +5,7 @@ import { SHIFT_TYPES } from '../data/initialData';
 import { Info, Paintbrush } from 'lucide-react';
 
 export function ShiftLegend({ activeBrush, setActiveBrush }) {
-  const legendItems = ['A', '1', '2', '3', 'H', 'L', 'V'];
+  const legendItems = ['A', '1', '2', '3', 'HT1', 'HT2', 'HT3', 'H', 'L', 'V'];
 
   return (
     <div className="legend-card no-print">

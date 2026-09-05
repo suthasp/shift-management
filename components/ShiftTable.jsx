@@ -191,6 +191,11 @@ export function ShiftTable({
               🎯 เป้าหมาย 7x24: {hoveredShiftInfo.code === '1' ? 'อย่างน้อย 1 คน' : 'อย่างน้อย 2 คน'} ต่อกะ
             </div>
           )}
+          {['HT1', 'HT2', 'HT3'].includes(hoveredShiftInfo.code) && (
+            <div style={{ fontSize: '0.78rem', color: '#00e676', marginBottom: 4 }}>
+              💰 งานล่วงเวลา (OT): มาทำแทนในวันหยุด (เบิก 1.5 / 1 / 3 แรง)
+            </div>
+          )}
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4, borderTop: '1px solid var(--border-color)', paddingTop: 6, marginTop: 4 }}>
             {SHIFT_TYPES[hoveredShiftInfo.code].description}
           </div>
@@ -207,8 +212,8 @@ export function ShiftTable({
           className="roster-table" 
           style={{ 
             tableLayout: 'fixed', 
-            width: 44 + 150 + (daysCount * 38) + 268, 
-            minWidth: 44 + 150 + (daysCount * 38) + 268 
+            width: 44 + 150 + (daysCount * 38) + 320, 
+            minWidth: 44 + 150 + (daysCount * 38) + 320 
           }}
         >
           {/* Explicit column widths to prevent sticky columns from overlapping day 1 */}
@@ -221,6 +226,7 @@ export function ShiftTable({
             <col style={{ width: 52 }} /> {/* สรุป 1 */}
             <col style={{ width: 52 }} /> {/* สรุป 2 */}
             <col style={{ width: 52 }} /> {/* สรุป 3 */}
+            <col style={{ width: 52 }} /> {/* สรุป OT */}
             <col style={{ width: 52 }} /> {/* สรุป H */}
             <col style={{ width: 60 }} /> {/* สรุป ชม. */}
           </colgroup>
@@ -240,7 +246,7 @@ export function ShiftTable({
                 {monthNameEng} ({THAI_MONTHS[month - 1]} {year + 543})
               </th>
               {/* Summary Header Spans */}
-              <th className="col-summary-header" colSpan={5}>
+              <th className="col-summary-header" colSpan={6}>
                 สรุปรวมรายบุคคล
               </th>
             </tr>
@@ -267,6 +273,7 @@ export function ShiftTable({
               <th className="col-summary-header" title="กะเช้า (07:00-16:00)">1 (เช้า)</th>
               <th className="col-summary-header" title="กะบ่าย (15:00-24:00)">2 (บ่าย)</th>
               <th className="col-summary-header" title="กะดึก (23:00-08:00)">3 (ดึก)</th>
+              <th className="col-summary-header" title="งานล่วงเวลาในวันหยุด (HT1, HT2, HT3)">OT (กะ)</th>
               <th className="col-summary-header" title="วันหยุด">H (หยุด)</th>
               <th className="col-summary-header" title="ชั่วโมงทำงานทั้งหมด">รวม (ชม.)</th>
             </tr>
@@ -293,6 +300,7 @@ export function ShiftTable({
               <th className="col-summary-header">เช้า</th>
               <th className="col-summary-header">บ่าย</th>
               <th className="col-summary-header">ดึก</th>
+              <th className="col-summary-header">OT</th>
               <th className="col-summary-header">วัน</th>
               <th className="col-summary-header">ชม.</th>
             </tr>
@@ -305,15 +313,17 @@ export function ShiftTable({
               const staffViolations = violationsMap[staff.id] || {};
 
               // Calculate personal stats
-              let count1 = 0, count2 = 0, count3 = 0, countH = 0;
+              let count1 = 0, count2 = 0, count3 = 0, countH = 0, countOT = 0, countA = 0;
               for (let d = 0; d < daysCount; d++) {
                 const c = staffShifts[d] || 'H';
                 if (c === '1') count1++;
                 else if (c === '2') count2++;
                 else if (c === '3') count3++;
+                else if (['HT1', 'HT2', 'HT3'].includes(c)) countOT++;
+                else if (c === 'A') countA++;
                 else if (c === 'H') countH++;
               }
-              const totalHours = (count1 + count2 + count3) * 8;
+              const totalHours = (count1 + count2 + count3 + countA + countOT) * 8;
 
               return (
                 <tr key={staff.id} className="tr-staff-row">
@@ -357,6 +367,9 @@ export function ShiftTable({
                   <td className="col-summary-cell">{count1}</td>
                   <td className="col-summary-cell">{count2}</td>
                   <td className="col-summary-cell">{count3}</td>
+                  <td className="col-summary-cell" style={{ color: countOT > 0 ? '#00e676' : 'var(--text-muted)', fontWeight: countOT > 0 ? 700 : 400 }}>
+                    {countOT}
+                  </td>
                   <td className="col-summary-cell" style={{ color: '#eab308' }}>{countH}</td>
                   <td className="col-summary-cell" style={{ fontWeight: 700, color: 'var(--accent-cyan)' }}>
                     {totalHours}
@@ -396,7 +409,7 @@ export function ShiftTable({
                   </td>
                 );
               })}
-              <td colSpan={5} className="col-summary-cell" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <td colSpan={6} className="col-summary-cell" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                 ธีระกิจ & วรพงษ์ (จ.-ศ.)
               </td>
             </tr>
@@ -426,7 +439,7 @@ export function ShiftTable({
                   </td>
                 );
               })}
-              <td colSpan={5} className="col-summary-cell" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <td colSpan={6} className="col-summary-cell" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                 เป้าหมาย 7x24: 1 คน
               </td>
             </tr>
@@ -457,7 +470,7 @@ export function ShiftTable({
                   </td>
                 );
               })}
-              <td colSpan={5} className="col-summary-cell" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <td colSpan={6} className="col-summary-cell" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                 เป้าหมาย 7x24: 2 คน
               </td>
             </tr>
@@ -488,8 +501,38 @@ export function ShiftTable({
                   </td>
                 );
               })}
-              <td colSpan={5} className="col-summary-cell" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <td colSpan={6} className="col-summary-cell" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                 เป้าหมาย 7x24: 2 คน
+              </td>
+            </tr>
+
+            {/* Row for Overtime OT (HT1, HT2, HT3) */}
+            <tr className="tr-coverage-row">
+              <td className="col-sticky-num"></td>
+              <td 
+                className="col-sticky-name coverage-label-cell"
+                title={`งานล่วงเวลาในวันหยุด (HT1, HT2, HT3)\n⏰ เวลา: 8 ชม. ตามกะที่มาทำแทน\n💰 ค่าตอบแทน: 1.5 แรง / 1 แรง / 3 แรง ตามเงื่อนไข`}
+                onMouseEnter={(e) => handleHoverShift('HT1', e)}
+                onMouseLeave={handleLeaveShift}
+              >
+                <span className="shift-tag tag-ht1" style={{ width: 20, height: 20, fontSize: '0.7rem', marginRight: 6, background: 'var(--shift-ht-bg)', color: '#fff' }}>OT</span>
+                <span>OT วันหยุด (HT1,2,3)</span>
+              </td>
+              {dailyCoverage.map((dayCov, d) => {
+                const count = (dayCov.counts['HT1'] || 0) + (dayCov.counts['HT2'] || 0) + (dayCov.counts['HT3'] || 0);
+                return (
+                  <td 
+                    key={`cov-ot-${d}`} 
+                    className="coverage-cell"
+                    style={{ color: count > 0 ? '#00e676' : 'var(--text-muted)' }}
+                    title={`วันที่ ${d + 1}: มีผู้ทำ OT ทั้งหมด ${count} คน`}
+                  >
+                    {count}
+                  </td>
+                );
+              })}
+              <td colSpan={6} className="col-summary-cell" style={{ fontSize: '0.75rem', color: '#00e676' }}>
+                เบิก OT (1.5 / 1 / 3 แรง)
               </td>
             </tr>
 
@@ -517,7 +560,7 @@ export function ShiftTable({
                   </td>
                 );
               })}
-              <td colSpan={5} className="col-summary-cell"></td>
+              <td colSpan={6} className="col-summary-cell"></td>
             </tr>
           </tfoot>
         </table>

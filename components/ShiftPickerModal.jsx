@@ -26,7 +26,7 @@ export function ShiftPickerModal({
   const dayNum = target.dayIndex + 1;
   const dow = getDayOfWeek(year, month, dayNum);
 
-  const availableShifts = ['1', '2', '3', 'A', 'H', 'L', 'V'];
+  const availableShifts = ['1', '2', '3', 'HT1', 'HT2', 'HT3', 'A', 'H', 'L', 'V'];
 
   return (
     <div className="shift-picker-overlay" onClick={onClose}>

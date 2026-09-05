@@ -26,6 +26,9 @@ export function isWeekend(year, month, day) {
 /**
  * Calculate coverage for each day in the month
  */
+/**
+ * Calculate coverage for each day in the month
+ */
 export function calculateDailyCoverage(schedule, staffList, daysCount, settings = DC_SETTINGS_DEFAULT) {
   const coverage = [];
   const minStaff = settings.minStaffPerShift || { '1': 1, '2': 2, '3': 2 };
@@ -39,6 +42,10 @@ export function calculateDailyCoverage(schedule, staffList, daysCount, settings 
       'H': 0,
       'L': 0,
       'V': 0,
+      'HT1': 0,
+      'HT2': 0,
+      'HT3': 0,
+      'OT': 0,
       other: 0,
       totalWorking: 0
     };
@@ -52,12 +59,25 @@ export function calculateDailyCoverage(schedule, staffList, daysCount, settings 
         counts.other++;
       }
 
-      if (code === '1' || code === '2' || code === '3' || code === 'A') {
+      // HT1, HT2, HT3 count toward their respective shift coverage & OT total
+      if (code === 'HT1') {
+        counts['1']++;
+        counts['OT']++;
+        counts.totalWorking++;
+      } else if (code === 'HT2') {
+        counts['2']++;
+        counts['OT']++;
+        counts.totalWorking++;
+      } else if (code === 'HT3') {
+        counts['3']++;
+        counts['OT']++;
+        counts.totalWorking++;
+      } else if (code === '1' || code === '2' || code === '3' || code === 'A') {
         counts.totalWorking++;
       }
     });
 
-    // Check deficits
+    // Check deficits against minimum requirements
     const alerts = [];
     ['1', '2', '3'].forEach(shiftCode => {
       const required = minStaff[shiftCode] || 1;
@@ -90,23 +110,33 @@ export function calculateDailyCoverage(schedule, staffList, daysCount, settings 
 }
 
 /**
- * Calculate working metrics, hours and allowances per staff
+ * Calculate working metrics, hours, OT and allowances per staff
  */
 export function calculateStaffSummary(schedule, staffList, daysCount, year, month, settings = DC_SETTINGS_DEFAULT) {
   const rates = settings.allowanceRates || { nightShiftRate: 300, weekendBonusRate: 150 };
 
   return staffList.map(staff => {
     const shifts = schedule[staff.id] || [];
-    const counts = { '1': 0, '2': 0, '3': 0, 'A': 0, 'H': 0, 'L': 0, 'V': 0 };
+    const counts = { 
+      '1': 0, '2': 0, '3': 0, 'A': 0, 'H': 0, 'L': 0, 'V': 0,
+      'HT1': 0, 'HT2': 0, 'HT3': 0 
+    };
     let totalWorkDays = 0;
     let weekendShifts = 0;
+    let totalOTShifts = 0;
 
     for (let d = 0; d < daysCount; d++) {
       const code = shifts[d] || 'H';
       if (counts[code] !== undefined) {
         counts[code]++;
       }
-      if (code === '1' || code === '2' || code === '3' || code === 'A') {
+      if (code === 'HT1' || code === 'HT2' || code === 'HT3') {
+        totalOTShifts++;
+        totalWorkDays++;
+        if (isWeekend(year, month, d + 1)) {
+          weekendShifts++;
+        }
+      } else if (code === '1' || code === '2' || code === '3' || code === 'A') {
         totalWorkDays++;
         if (isWeekend(year, month, d + 1)) {
           weekendShifts++;
@@ -115,9 +145,15 @@ export function calculateStaffSummary(schedule, staffList, daysCount, year, mont
     }
 
     const totalHours = totalWorkDays * 8;
-    const nightShiftAllowance = counts['3'] * rates.nightShiftRate;
+    const totalOTHours = totalOTShifts * 8;
+    // Night shift count includes normal 3 and OT HT3
+    const nightShiftCount = counts['3'] + counts['HT3'];
+    const nightShiftAllowance = nightShiftCount * rates.nightShiftRate;
     const weekendAllowance = weekendShifts * rates.weekendBonusRate;
-    const totalEstimatedAllowance = nightShiftAllowance + weekendAllowance;
+    // Estimated OT Allowance (default 1 แรง = 500 บาท/กะ)
+    const baseDailyWage = 500;
+    const estimatedOTAllowance = totalOTShifts * baseDailyWage;
+    const totalEstimatedAllowance = nightShiftAllowance + weekendAllowance + estimatedOTAllowance;
 
     return {
       staffId: staff.id,
@@ -127,10 +163,14 @@ export function calculateStaffSummary(schedule, staffList, daysCount, year, mont
       counts,
       totalWorkDays,
       totalOffDays: counts['H'] + counts['L'] + counts['V'],
+      totalOTShifts,
+      totalOTHours,
       totalHours,
       weekendShifts,
+      nightShiftCount,
       nightShiftAllowance,
       weekendAllowance,
+      estimatedOTAllowance,
       totalEstimatedAllowance
     };
   });
@@ -138,7 +178,7 @@ export function calculateStaffSummary(schedule, staffList, daysCount, year, mont
 
 /**
  * Check Labor & Safety Compliance:
- * 1. Night shift (3) directly followed by morning shift (1)
+ * 1. Night shift (3, HT3) directly followed by morning shift (1, HT1)
  * 2. Consecutive working days > 6
  * 3. Consecutive night shifts > 3
  */
@@ -154,17 +194,19 @@ export function checkComplianceViolations(schedule, staffList, daysCount) {
 
     for (let d = 0; d < daysCount; d++) {
       const current = shifts[d] || 'H';
-      const isWork = current === '1' || current === '2' || current === '3' || current === 'A';
+      const isWork = ['1', '2', '3', 'A', 'HT1', 'HT2', 'HT3'].includes(current);
+      const isNight = current === '3' || current === 'HT3';
 
       // 1. Check Night -> Morning transition
       if (d < daysCount - 1) {
         const next = shifts[d + 1] || 'H';
-        if (current === '3' && next === '1') {
+        const nextIsMorning = next === '1' || next === 'HT1';
+        if (isNight && nextIsMorning) {
           staffViolations[d] = staffViolations[d] || [];
           staffViolations[d].push({
             type: 'quick_turnaround',
             level: 'danger',
-            message: 'เข้ากะดึก (3) เลิก 08:00 ต่อด้วยกะเช้า (1) ทันที พักผ่อนไม่ถึง 12 ชม.'
+            message: 'เข้ากะดึก เลิก 08:00 ต่อด้วยกะเช้าทันที พักผ่อนไม่ถึง 12 ชม.'
           });
         }
       }
@@ -185,7 +227,7 @@ export function checkComplianceViolations(schedule, staffList, daysCount) {
       }
 
       // 3. Track consecutive night shifts
-      if (current === '3') {
+      if (isNight) {
         consecutiveNights++;
         if (consecutiveNights > 3) {
           staffViolations[d] = staffViolations[d] || [];
@@ -208,9 +250,11 @@ export function checkComplianceViolations(schedule, staffList, daysCount) {
 
 /**
  * Smart Auto-Scheduler Algorithm for Data Center 24/7 Operations
- * Generates an optimal, balanced roster that fulfills coverage and respects rest days
- * Rule: ธีระกิจ & วรพงษ์ stand on Shift A (Mon-Fri), Weekend H
- * 7x24 Operations: Shift 1 = 1 person, Shift 2 = 2 persons, Shift 3 = 2 persons
+ * Generates an optimal, balanced roster:
+ * 1. ธีระกิจ & วรพงษ์ stand on Shift A (Mon-Fri), Weekend H
+ * 2. Equal off days (H) across all rotating staff in every month (8 days off)
+ * 3. 7x24 Operations: Shift 3 = 2, Shift 2 = 2, Shift 1 = 1 (minimum)
+ * 4. "ถ้ามีคนเหลือเกินให้ลงกะ1" -> All surplus staff assigned to Shift 1!
  */
 export function generateAutoSchedule({
   staffList,
@@ -257,47 +301,68 @@ export function generateAutoSchedule({
   });
 
   // 2. If exactly 7 rotating operators and standard requirements (1x[1], 2x[2], 2x[3])
-  // use the mathematically optimal 7x24 rotating shift cycle
   const req1 = minPerShift['1'] ?? 1;
   const req2 = minPerShift['2'] ?? 2;
   const req3 = minPerShift['3'] ?? 2;
 
   if (rotatingStaff.length === 7 && req1 === 1 && req2 === 2 && req3 === 2) {
-    // Pattern: 1 -> 2 -> 2 -> 3 -> 3 -> H -> H
-    // 2 consecutive night shifts followed by 2 consecutive rest days, zero fatigue violations!
+    // Base rotating cycle: 1 -> 2 -> 2 -> 3 -> 3 -> H -> H
     const cycle = ['1', '2', '2', '3', '3', 'H', 'H'];
     rotatingStaff.forEach((staff, sIdx) => {
       for (let d = 0; d < daysCount; d++) {
         newSchedule[staff.id][d] = cycle[(d + sIdx) % 7];
       }
     });
+
+    // Rule: "วันหยุดแต่ละคน ในแต่ละเดือนต้องเท่ากันทุกเดือน ถ้ามีคนเหลือเกินให้ลงกะ1"
+    // Target off-days per rotating staff is exactly 8 days for standard months
+    const targetOffDays = 8;
+    rotatingStaff.forEach((staff) => {
+      const row = newSchedule[staff.id];
+      let currentH = row.filter(c => c === 'H').length;
+      if (currentH > targetOffDays) {
+        for (let d = 0; d < daysCount && currentH > targetOffDays; d++) {
+          if (row[d] === 'H') {
+            const prev = d > 0 ? row[d - 1] : 'H';
+            // Avoid 3 -> 1 transition
+            if (prev !== '3' && prev !== 'HT3') {
+              let workStreak = 0;
+              for (let i = d - 1; i >= 0 && row[i] !== 'H'; i--) workStreak++;
+              for (let i = d + 1; i < daysCount && row[i] !== 'H'; i++) workStreak++;
+              if (workStreak + 1 <= 6) {
+                row[d] = '1'; // Assign surplus person to Shift 1!
+                currentH--;
+              }
+            }
+          }
+        }
+      }
+    });
+
     return newSchedule;
   }
 
-  // Fallback: Dynamic constraint scheduler for custom team sizes or requirements
+  // Fallback: Dynamic constraint scheduler for custom team sizes
   const staffState = rotatingStaff.map(s => ({
     id: s.id,
     consecutiveWork: 0,
     consecutiveNights: 0,
     lastShift: 'H',
     totalWorkDays: 0,
-    totalNights: 0
+    totalNights: 0,
+    totalOffDays: 0
   }));
 
-  for (let d = 0; d < daysCount; d++) {
-    const needed = {
-      '3': req3,
-      '2': req2,
-      '1': req1
-    };
+  const targetOffDays = 8;
 
+  for (let d = 0; d < daysCount; d++) {
     const availableStaff = [...staffState].sort((a, b) => a.totalWorkDays - b.totalWorkDays);
     const assignedToday = new Set();
 
     // Night (3)
     let nightAssigned = 0;
     for (const staff of availableStaff) {
-      if (nightAssigned >= needed['3']) break;
+      if (nightAssigned >= req3) break;
       if (assignedToday.has(staff.id)) continue;
       if (staff.consecutiveNights >= 3 || staff.consecutiveWork >= 6) continue;
 
@@ -314,9 +379,9 @@ export function generateAutoSchedule({
     // Afternoon (2)
     let afternoonAssigned = 0;
     for (const staff of availableStaff) {
-      if (afternoonAssigned >= needed['2']) break;
+      if (afternoonAssigned >= req2) break;
       if (assignedToday.has(staff.id)) continue;
-      if (staff.lastShift === '3') continue;
+      if (staff.lastShift === '3' || staff.lastShift === 'HT3') continue;
       if (staff.consecutiveWork >= 6) continue;
 
       newSchedule[staff.id][d] = '2';
@@ -328,21 +393,24 @@ export function generateAutoSchedule({
       afternoonAssigned++;
     }
 
-    // Morning (1)
-    let morningAssigned = 0;
+    // Morning (1) + All surplus available staff ("ถ้ามีคนเหลือเกินให้ลงกะ1")
     for (const staff of availableStaff) {
-      if (morningAssigned >= needed['1']) break;
       if (assignedToday.has(staff.id)) continue;
-      if (staff.lastShift === '3') continue;
+      if (staff.lastShift === '3' || staff.lastShift === 'HT3') continue;
       if (staff.consecutiveWork >= 6) continue;
+      
+      // If staff has already reached target off days or needs to work to balance off days
+      const daysRemaining = daysCount - d;
+      const offDaysNeeded = targetOffDays - staff.totalOffDays;
 
-      newSchedule[staff.id][d] = '1';
-      assignedToday.add(staff.id);
-      staff.lastShift = '1';
-      staff.consecutiveWork++;
-      staff.consecutiveNights = 0;
-      staff.totalWorkDays++;
-      morningAssigned++;
+      if (daysRemaining > offDaysNeeded) {
+        newSchedule[staff.id][d] = '1';
+        assignedToday.add(staff.id);
+        staff.lastShift = '1';
+        staff.consecutiveWork++;
+        staff.consecutiveNights = 0;
+        staff.totalWorkDays++;
+      }
     }
 
     // Day Off (H)
@@ -352,6 +420,7 @@ export function generateAutoSchedule({
         staff.lastShift = 'H';
         staff.consecutiveWork = 0;
         staff.consecutiveNights = 0;
+        staff.totalOffDays++;
       }
     }
   }
