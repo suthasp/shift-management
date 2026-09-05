@@ -1,4 +1,3 @@
-import ExcelJS from 'exceljs';
 import { THAI_MONTHS, THAI_DAYS_SHORT } from '../data/initialData.js';
 import { getDayOfWeek, isWeekend } from './schedulerEngine.js';
 
@@ -51,6 +50,9 @@ export async function exportRosterToExcel({ schedule, staffList, year, month, da
   const monthNameThai = THAI_MONTHS[month - 1];
   const monthNameEng = new Date(year, month - 1, 1).toLocaleString('en-US', { month: 'long' });
 
+  // Dynamically import ExcelJS for browser client
+  const ExcelJSModule = await import('exceljs');
+  const ExcelJS = ExcelJSModule.default || ExcelJSModule;
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'DC Shift Management System';
   workbook.created = new Date();

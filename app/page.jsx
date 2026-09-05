@@ -13,7 +13,6 @@ import {
   checkComplianceViolations, 
   generateAutoSchedule 
 } from '../utils/schedulerEngine';
-import { exportRosterToExcel, exportBackupJSON } from '../utils/excelExport';
 
 import { Header } from '../components/Header';
 import { TopMetricsBar } from '../components/TopMetricsBar';
@@ -199,15 +198,21 @@ export default function Home() {
     }
   };
 
-  // Export to Excel
-  const handleExportExcel = () => {
-    exportRosterToExcel({
-      schedule,
-      staffList,
-      year,
-      month,
-      daysCount
-    });
+  // Export to Excel (dynamically loaded on demand to prevent SSR bundling issue)
+  const handleExportExcel = async () => {
+    try {
+      const { exportRosterToExcel } = await import('../utils/excelExport.js');
+      await exportRosterToExcel({
+        schedule,
+        staffList,
+        year,
+        month,
+        daysCount
+      });
+    } catch (err) {
+      console.error('Export error:', err);
+      alert('เกิดข้อผิดพลาดในการดาวน์โหลด Excel: ' + err.message);
+    }
   };
 
   // Reset to default
