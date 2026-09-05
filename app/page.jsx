@@ -59,6 +59,11 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
     try {
+      const savedTheme = localStorage.getItem('dc_shift_theme');
+      if (savedTheme) {
+        setTheme(savedTheme);
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
       const savedStaff = localStorage.getItem('dc_shift_staff_list');
       if (savedStaff) {
         setStaffList(JSON.parse(savedStaff));

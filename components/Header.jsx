@@ -36,6 +36,9 @@ export function Header({
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
     document.documentElement.setAttribute('data-theme', nextTheme);
+    try {
+      localStorage.setItem('dc_shift_theme', nextTheme);
+    } catch (e) {}
   };
 
   return (
