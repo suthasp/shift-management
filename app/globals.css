@@ -49,9 +49,10 @@
   --shift-v-bg: #2dd4bf;
   --shift-v-text: #042f2e;
 
-  --shift-ht-bg: #00b050;
-  --shift-ht-text: #ffffff;
-  --shift-ht-shadow: rgba(0, 176, 80, 0.4);
+  /* OT วันหยุด (HT1/HT2/HT3) — เหลืองเข้ม ใช้ตัวอักษรสีเข้มชุดเดียวกับกะ A และ H */
+  --shift-ht-bg: #d9a300;
+  --shift-ht-text: #3e2723;
+  --shift-ht-shadow: rgba(217, 163, 0, 0.4);
 
   /* Weekend Badges */
   --sat-badge-bg: #9333ea;
@@ -1147,5 +1148,5 @@ thead th.col-sticky-name,
   .cell-shift-3 { background-color: #ffb2dd !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .cell-shift-a { background-color: #ffb74d !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .cell-shift-h { background-color: #ffeb3b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .cell-shift-ht1, .cell-shift-ht2, .cell-shift-ht3 { background-color: #00b050 !important; color: #ffffff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .cell-shift-ht1, .cell-shift-ht2, .cell-shift-ht3 { background-color: #d9a300 !important; color: #3e2723 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }

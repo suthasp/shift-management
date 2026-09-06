@@ -35,6 +35,16 @@ const SHIFT_STYLE_MAP = {
   }
 };
 
+// OT วันหยุด — เหลืองเข้ม ให้ต่างจาก H (เหลืองสด) อย่างชัดเจน
+// ก่อนหน้านี้ไม่มี entry จึงตกไปใช้สีของ H ทำให้แยกไม่ออกในไฟล์ที่ export
+const HT_STYLE = {
+  fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9A300' } },
+  font: { name: 'Arial', size: 10, bold: true, color: { argb: 'FF3E2723' } }
+};
+SHIFT_STYLE_MAP['HT1'] = HT_STYLE;
+SHIFT_STYLE_MAP['HT2'] = HT_STYLE;
+SHIFT_STYLE_MAP['HT3'] = HT_STYLE;
+
 const THIN_BORDER = {
   top: { style: 'thin', color: { argb: 'FFD1D5DB' } },
   left: { style: 'thin', color: { argb: 'FFD1D5DB' } },
