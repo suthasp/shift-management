@@ -44,7 +44,7 @@ export const SHIFT_TYPES = {
     timeRange: '08:00 - 17:00',
     durationHours: 8,
     overlapHours: 0,
-    bgColor: '#ffb74d',
+    bgColor: '#90caf9',
     textColor: '#0f172a',
     badgeClass: 'shift-a',
     isWork: true,

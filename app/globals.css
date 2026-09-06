@@ -35,9 +35,10 @@
   --shift-3-text: #3c0326;
   --shift-3-shadow: rgba(255, 178, 221, 0.4);
 
-  --shift-a-bg: #ffb74d;
-  --shift-a-text: #3e2723;
-  --shift-a-shadow: rgba(255, 183, 77, 0.4);
+  /* กะปกติ (A) — ฟ้าอ่อน เลือกโทนน้ำเงินนวลให้ต่างจากกะเช้า (1) ที่เป็นฟ้าสด #00e5ff ชัดเจน */
+  --shift-a-bg: #90caf9;
+  --shift-a-text: #0f172a;
+  --shift-a-shadow: rgba(144, 202, 249, 0.4);
 
   --shift-h-bg: #ffeb3b;
   --shift-h-text: #3e2723;
@@ -1146,7 +1147,7 @@ thead th.col-sticky-name,
   .cell-shift-1 { background-color: #00e5ff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .cell-shift-2 { background-color: #00e676 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .cell-shift-3 { background-color: #ffb2dd !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .cell-shift-a { background-color: #ffb74d !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .cell-shift-a { background-color: #90caf9 !important; color: #0f172a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .cell-shift-h { background-color: #ffeb3b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .cell-shift-ht1, .cell-shift-ht2, .cell-shift-ht3 { background-color: #d9a300 !important; color: #3e2723 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }

@@ -182,12 +182,12 @@ export function ShiftTable({
             ⏰ เวลา: {SHIFT_TYPES[hoveredShiftInfo.code].timeRange} น. ({SHIFT_TYPES[hoveredShiftInfo.code].durationHours} ชม.)
           </div>
           {hoveredShiftInfo.code === 'A' && (
-            <div style={{ fontSize: '0.78rem', color: '#ffb74d', marginBottom: 4 }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--shift-a-bg)', marginBottom: 4 }}>
               👤 เจ้าหน้าที่: ธีระกิจ พรมตุ้ม (จันทร์ - ศุกร์)
             </div>
           )}
           {hoveredShiftInfo.code === '1' && (
-            <div style={{ fontSize: '0.78rem', color: '#ffb74d', marginBottom: 4 }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--accent-amber)', marginBottom: 4 }}>
               👤 วรพงษ์ ริมสกุล ยืนประจำ (จันทร์ - ศุกร์) + หมุนเวียนอีกอย่างน้อย 1 คน
             </div>
           )}
@@ -407,7 +407,7 @@ export function ShiftTable({
                   <td
                     key={`cov-a-${d}`}
                     className={`coverage-cell ${!isWknd && count < 1 ? 'coverage-warning' : 'coverage-ok'}`}
-                    style={{ color: '#ffb74d' }}
+                    style={{ color: 'var(--shift-a-bg)' }}
                     title={`วันที่ ${d + 1}: กะ A มี ${count} คน (ธีระกิจ)`}
                   >
                     {count}

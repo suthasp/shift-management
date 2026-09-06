@@ -18,8 +18,8 @@ const SHIFT_STYLE_MAP = {
     font: { name: 'Arial', size: 10, bold: true, color: { argb: 'FF3C0326' } }
   },
   'A': {
-    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFB74D' } }, // Orange / Amber
-    font: { name: 'Arial', size: 10, bold: true, color: { argb: 'FF3E2723' } }
+    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF90CAF9' } }, // Light Blue
+    font: { name: 'Arial', size: 10, bold: true, color: { argb: 'FF0F172A' } }
   },
   'H': {
     fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } }, // Vibrant Yellow
@@ -271,7 +271,7 @@ export async function exportRosterToExcel({ schedule, staffList, year, month, da
   const startCovRow = 4 + staffList.length;
 
   const coverageDefinitions = [
-    { code: 'A', name: 'กะปกติ (08:00 - 17:00)', target: 2, bg: 'FFFFF7ED', fg: 'FFFFB74D' },
+    { code: 'A', name: 'กะปกติ (08:00 - 17:00)', target: 1, bg: 'FFE3F2FD', fg: 'FF90CAF9' },
     { code: '1', name: 'กะเช้า (07:00 - 16:00)', target: 1, bg: 'FFE0F7FA', fg: 'FF00E5FF' },
     { code: '2', name: 'กะบ่าย (15:00 - 24:00)', target: 2, bg: 'FFE8F5E9', fg: 'FF00E676' },
     { code: '3', name: 'กะดึก (23:00 - 08:00)', target: 2, bg: 'FFFCE4EC', fg: 'FFFFB2DD' },
