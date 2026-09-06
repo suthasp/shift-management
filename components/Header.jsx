@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { 
-  Server, 
   Calendar, 
   Wand2, 
   ArrowLeftRight, 
@@ -15,6 +14,7 @@ import {
   Moon,
   ShieldCheck
 } from 'lucide-react';
+import { BrandMark } from './BrandMark';
 import { THAI_MONTHS } from '../data/initialData';
 
 export function Header({
@@ -47,7 +47,7 @@ export function Header({
         {/* Brand / Logo */}
         <div className="brand-section">
           <div className="dc-badge-pulse">
-            <Server size={22} />
+            <BrandMark size={24} />
           </div>
           <div className="brand-text">
             <h1>
