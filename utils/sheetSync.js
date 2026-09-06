@@ -18,6 +18,9 @@ export const SHEET_PUB_URL =
 /** Google แคชไฟล์ที่เผยแพร่ไว้ราว 5 นาที ดึงถี่กว่านี้ก็ไม่ได้ข้อมูลใหม่ */
 export const SHEET_CACHE_SECONDS = 300;
 
+/** gid ของแท็บ "พนักงาน" ใช้เป็นทางสำรองกรณีอ่านรายชื่อแท็บจากหน้า pub ไม่ได้ */
+export const STAFF_TAB_GID = '1148234319';
+
 const VALID_CODES = new Set(['1', '2', '3', 'A', 'H', 'L', 'V', 'HT1', 'HT2', 'HT3']);
 
 const TH_MONTHS_FULL = [
@@ -74,9 +77,20 @@ export function parseCSV(text) {
 /* ตัวช่วย                                                             */
 /* ------------------------------------------------------------------ */
 
-/** ยุบช่องว่างซ้อนและตัดหัวท้าย — ชีตมีชื่อแบบ "วรพงษ์  ริมสกุล " */
+/**
+ * อักขระควบคุมทิศทางข้อความ (bidi) ที่ Google Sheets แอบใส่มา
+ * เช่นเบอร์โทรในชีตถูกครอบด้วย U+202D ... U+202C ซึ่งมองไม่เห็นแต่ติดมากับค่า
+ * ถ้าไม่ตัดทิ้งจะทำให้เทียบค่า/แสดงผลเพี้ยนโดยหาสาเหตุไม่เจอ
+ */
+const BIDI_CONTROLS = /[‎‏‪-‮⁦-⁩﻿]/g;
+
+/** ยุบช่องว่างซ้อน ตัดอักขระซ่อน และตัดหัวท้าย — ชีตมีชื่อแบบ "วรพงษ์  ริมสกุล " */
 export function normalizeName(s) {
-  return String(s || '').replace(/\s+/g, ' ').trim();
+  return String(s || '')
+    .replace(BIDI_CONTROLS, '')
+    .replace(/ /g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /** ปีมากกว่า 2400 ถือเป็น พ.ศ. แปลงเป็น ค.ศ. */
@@ -280,6 +294,93 @@ export function buildScheduleFromSheet(parsed, staffList, daysCount) {
  *   'no-tab'   สมุดงานยังไม่มีแท็บของเดือนนี้ -> ผู้เรียกควรใช้ตารางที่แอปสร้างเอง
  * ถ้าดึงไม่ได้จะ throw เพื่อให้ผู้เรียกแสดงข้อความผิดพลาด
  */
+/**
+ * แปลง CSV ของแท็บ "พนักงาน" เป็นรายชื่อเจ้าหน้าที่
+ * หัวตารางคาดว่าเป็น No. / ชื่อ - นามสกุล / ตำแหน่ง / เบอร์โทร
+ * แต่ค้นตำแหน่งคอลัมน์จากข้อความหัวจริง ๆ เพื่อให้สลับลำดับคอลัมน์ในชีตได้โดยไม่พัง
+ */
+export function parseStaffCsv(text, existingStaff = []) {
+  const rows = parseCSV(text).filter(r => r.some(c => String(c).trim() !== ''));
+  if (rows.length < 2) throw new Error('แท็บพนักงานไม่มีข้อมูล');
+
+  const headerIdx = rows.findIndex(r => {
+    const joined = r.join('|');
+    return /ชื่อ|name/i.test(joined) && /ตำแหน่ง|position/i.test(joined);
+  });
+  if (headerIdx === -1) throw new Error('ไม่พบหัวตารางของแท็บพนักงาน (ต้องมีคอลัมน์ "ชื่อ" และ "ตำแหน่ง")');
+
+  const header = rows[headerIdx].map(c => normalizeName(c));
+  const findCol = (...patterns) =>
+    header.findIndex(h => patterns.some(p => p.test(h)));
+
+  const colNo = findCol(/^no\.?$/i, /ลำดับ/);
+  const colName = findCol(/ชื่อ/, /^name$/i);
+  const colPosition = findCol(/ตำแหน่ง/, /position/i);
+  const colPhone = findCol(/เบอร์|โทร/, /phone|tel/i);
+
+  if (colName === -1) throw new Error('ไม่พบคอลัมน์ชื่อในแท็บพนักงาน');
+
+  const byId = new Map(existingStaff.map(s => [s.id, s]));
+  const staff = [];
+  const seenIds = new Set();
+
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const r = rows[i];
+    const name = normalizeName(r[colName]);
+    if (!name) continue;
+
+    const rawNo = colNo === -1 ? '' : normalizeName(r[colNo]);
+    const id = /^\d+$/.test(rawNo) ? Number(rawNo) : staff.length + 1;
+    if (seenIds.has(id)) continue; // กันแถวซ้ำจนคีย์ชนกัน
+    seenIds.add(id);
+
+    const prev = byId.get(id);
+    staff.push({
+      id,
+      empCode: `CNO-${String(id).padStart(3, '0')}`,
+      name,
+      position: colPosition === -1 ? (prev?.position || '') : normalizeName(r[colPosition]),
+      phone: colPhone === -1 ? (prev?.phone || '') : normalizeName(r[colPhone]),
+      // ชีตไม่มีคอลัมน์นี้ จึงคงค่าที่ตั้งไว้ในแอปไว้
+      minRestHours: prev?.minRestHours ?? 12
+    });
+  }
+
+  if (staff.length === 0) throw new Error('แท็บพนักงานไม่มีแถวข้อมูล');
+  return staff;
+}
+
+/**
+ * ดึงรายชื่อเจ้าหน้าที่จากแท็บ "พนักงาน" ของชีต
+ * คืน { status: 'ok', staff, tabName, fetchedAt } หรือ throw ถ้าดึงไม่ได้
+ */
+export async function fetchStaffFromSheet({ existingStaff = [] } = {}) {
+  let gid = STAFF_TAB_GID;
+  let tabName = 'พนักงาน';
+
+  try {
+    const tabs = await discoverSheetTabs();
+    const tab = tabs.find(t => /พนักงาน|staff|เจ้าหน้าที่/i.test(t.name));
+    if (tab) {
+      gid = tab.gid;
+      tabName = tab.name;
+    }
+  } catch {
+    // อ่านรายชื่อแท็บไม่ได้ ก็ใช้ gid สำรองต่อไป
+  }
+
+  const res = await fetch(csvUrl(gid), { cache: 'no-store' });
+  if (!res.ok) throw new Error(`ดึงแท็บ "${tabName}" ไม่สำเร็จ (HTTP ${res.status})`);
+  const csv = await res.text();
+
+  return {
+    status: 'ok',
+    tabName,
+    staff: parseStaffCsv(csv, existingStaff),
+    fetchedAt: Date.now()
+  };
+}
+
 export async function fetchMonthFromSheet({ year, month, staffList, daysCount }) {
   const tabs = await discoverSheetTabs();
 

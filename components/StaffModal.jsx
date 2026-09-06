@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Users, X, Plus, Trash2, Edit3, Check, ArrowUp, ArrowDown } from 'lucide-react';
+import { SheetSyncBadge } from './SheetSyncBadge';
 
 export function StaffModal({
   isOpen,
@@ -10,7 +11,9 @@ export function StaffModal({
   onAddStaff,
   onUpdateStaff,
   onDeleteStaff,
-  onReorderStaff
+  onReorderStaff,
+  sheetSync,
+  onSheetSync
 }) {
   if (!isOpen) return null;
 
@@ -58,6 +61,28 @@ export function StaffModal({
 
         {/* Body */}
         <div className="modal-body">
+          {/* สถานะซิงก์รายชื่อกับแท็บ "พนักงาน" ของ Google Sheet */}
+          {sheetSync && (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem',
+              background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)',
+              borderRadius: '10px', padding: '0.6rem 0.85rem', marginBottom: '1.25rem'
+            }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                {sheetSync.locked
+                  ? 'แก้รายชื่อในแอปแล้ว — หยุดซิงก์อัตโนมัติไว้เพื่อไม่ให้ทับงานของคุณ'
+                  : sheetSync.status === 'synced'
+                    ? `ซิงก์จากแท็บ "${sheetSync.tabName}" ของ Google Sheet แล้ว ${sheetSync.count} คน`
+                    : sheetSync.status === 'loading'
+                      ? 'กำลังดึงรายชื่อจากชีต…'
+                      : sheetSync.status === 'error'
+                        ? `ซิงก์รายชื่อไม่สำเร็จ: ${sheetSync.error || 'ไม่ทราบสาเหตุ'}`
+                        : 'รายชื่อเจ้าหน้าที่ซิงก์จาก Google Sheet'}
+              </span>
+              <SheetSyncBadge state={sheetSync} onSync={onSheetSync} />
+            </div>
+          )}
+
           {/* Add Staff Button / Form */}
           {!isAdding ? (
             <div style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

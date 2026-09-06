@@ -23,11 +23,12 @@ import { ShiftSwapModal } from '../components/ShiftSwapModal';
 import { AnalyticsModal } from '../components/AnalyticsModal';
 import { AutoScheduleModal } from '../components/AutoScheduleModal';
 import { StaffModal } from '../components/StaffModal';
-import { fetchMonthFromSheet } from '../utils/sheetSync';
+import { fetchMonthFromSheet, fetchStaffFromSheet } from '../utils/sheetSync';
 
 /** ดึงจากชีตซ้ำทุก 1 นาที (Google แคชไฟล์ที่เผยแพร่ราว 5 นาที ถี่กว่านี้ไม่ได้ข้อมูลใหม่) */
 const SHEET_POLL_MS = 60 * 1000;
 const EDITED_MONTHS_KEY = 'dc_sheet_edited_months';
+const STAFF_EDITED_KEY = 'dc_sheet_staff_edited';
 
 const monthKey = (yr, mo) => `${yr}-${mo}`;
 
@@ -114,6 +115,11 @@ export default function Home() {
   const staffListRef = useRef(staffList);
   const applyingSheetRef = useRef(false);
 
+  // รายชื่อเจ้าหน้าที่มาจากแท็บ "พนักงาน" ของชีตเดียวกัน ใช้กติกาเดียวกับตารางกะ
+  const [staffSheetStatus, setStaffSheetStatus] = useState({ status: 'idle' });
+  const [staffEdited, setStaffEdited] = useState(false);
+  const applyingStaffRef = useRef(false);
+
   useEffect(() => { staffListRef.current = staffList; }, [staffList]);
 
   const isMonthLocked = editedMonths.has(monthKey(year, month));
@@ -135,6 +141,17 @@ export default function Home() {
     });
   }, [year, month]);
 
+  /** เรียกเมื่อผู้ใช้แก้ข้อมูลพนักงานเอง เพื่อหยุด auto-sync รายชื่อ */
+  const markStaffEdited = useCallback(() => {
+    if (applyingStaffRef.current) return;
+    setStaffEdited(true);
+    try {
+      localStorage.setItem(STAFF_EDITED_KEY, '1');
+    } catch (e) {
+      console.warn('LocalStorage error:', e);
+    }
+  }, []);
+
   // Load from localStorage after mount to prevent SSR hydration mismatch
   useEffect(() => {
     setMounted(true);
@@ -149,6 +166,7 @@ export default function Home() {
         document.documentElement.setAttribute('data-theme', savedTheme);
       }
       setEditedMonths(loadEditedMonths());
+      setStaffEdited(localStorage.getItem(STAFF_EDITED_KEY) === '1');
       let currentStaff = INITIAL_STAFF;
       const savedStaff = localStorage.getItem('dc_shift_staff_list');
       if (savedStaff) {
@@ -214,6 +232,42 @@ export default function Home() {
   }, [year, month, daysCount, mounted, settings]);
 
   /**
+   * ดึงรายชื่อเจ้าหน้าที่จากแท็บ "พนักงาน" ของชีตมาทับ
+   * force = true คือผู้ใช้กดเอง จะปลดล็อกให้กลับมาซิงก์อัตโนมัติด้วย
+   */
+  const syncStaffFromSheet = useCallback(async ({ force = false } = {}) => {
+    setStaffSheetStatus(s => ({ ...s, status: 'loading' }));
+    try {
+      const result = await fetchStaffFromSheet({ existingStaff: staffListRef.current });
+
+      applyingStaffRef.current = true;
+      setStaffList(result.staff);
+      staffListRef.current = result.staff;
+      setTimeout(() => { applyingStaffRef.current = false; }, 0);
+
+      if (force) {
+        setStaffEdited(false);
+        try {
+          localStorage.removeItem(STAFF_EDITED_KEY);
+        } catch (e) {
+          console.warn('LocalStorage error:', e);
+        }
+      }
+
+      setStaffSheetStatus({
+        status: 'synced',
+        tabName: result.tabName,
+        fetchedAt: result.fetchedAt,
+        count: result.staff.length
+      });
+      return result.staff;
+    } catch (err) {
+      setStaffSheetStatus({ status: 'error', error: err.message, fetchedAt: Date.now() });
+      return null;
+    }
+  }, []);
+
+  /**
    * ดึงตารางกะของเดือนที่เลือกจาก Google Sheet มาทับ
    * force = true คือผู้ใช้กดเอง จะปลดล็อกเดือนนั้นให้กลับมาซิงก์อัตโนมัติด้วย
    */
@@ -270,8 +324,19 @@ export default function Home() {
     }
   }, [year, month, daysCount]);
 
+  // ดึงรายชื่อเจ้าหน้าที่อัตโนมัติ ข้ามไปถ้าผู้ใช้แก้รายชื่อเองแล้ว
+  useEffect(() => {
+    if (!mounted) return;
+    if (staffEdited) return;
+
+    syncStaffFromSheet();
+    const id = setInterval(() => syncStaffFromSheet(), SHEET_POLL_MS);
+    return () => clearInterval(id);
+  }, [mounted, staffEdited, syncStaffFromSheet]);
+
   // ดึงอัตโนมัติเมื่อเปิดแอป / เปลี่ยนเดือน แล้ววนซ้ำตามรอบ
   // ข้ามไปถ้าเดือนนี้ถูกแก้ในแอปแล้ว (ผู้ใช้ต้องกดปุ่มเองเพื่อดึงทับ)
+  // ผูกกับ staffList ด้วย เพราะตารางกะจับคู่แถวตามรายชื่อ ถ้ารายชื่อเปลี่ยนต้องแมปใหม่
   useEffect(() => {
     if (!mounted) return;
     if (isMonthLocked) return;
@@ -279,7 +344,7 @@ export default function Home() {
     syncFromSheet();
     const id = setInterval(() => syncFromSheet(), SHEET_POLL_MS);
     return () => clearInterval(id);
-  }, [mounted, isMonthLocked, syncFromSheet]);
+  }, [mounted, isMonthLocked, syncFromSheet, staffList]);
 
   // Calculations
   const dailyCoverage = useMemo(() => {
@@ -386,6 +451,7 @@ export default function Home() {
 
   // Staff CRUD
   const handleAddStaff = (newStaffData) => {
+    markStaffEdited();
     const newId = Date.now();
     const created = {
       id: newId,
@@ -402,6 +468,7 @@ export default function Home() {
   };
 
   const handleUpdateStaff = (id, updatedData) => {
+    markStaffEdited();
     setStaffList(prev => prev.map(s => s.id === id ? { ...s, ...updatedData } : s));
   };
 
@@ -410,6 +477,7 @@ export default function Home() {
       alert('ศูนย์ข้อมูลจำเป็นต้องมีเจ้าหน้าที่อย่างน้อย 3 คน');
       return;
     }
+    markStaffEdited();
     setStaffList(prev => prev.filter(s => s.id !== id));
     setSchedule(prev => {
       const next = { ...prev };
@@ -521,6 +589,8 @@ export default function Home() {
         onAddStaff={handleAddStaff}
         onUpdateStaff={handleUpdateStaff}
         onDeleteStaff={handleDeleteStaff}
+        sheetSync={{ ...staffSheetStatus, locked: staffEdited }}
+        onSheetSync={() => syncStaffFromSheet({ force: true })}
       />
     </div>
   );
