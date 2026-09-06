@@ -319,7 +319,9 @@ export async function exportRosterToExcel({ schedule, staffList, year, month, da
     // Merge summary columns for coverage
     sheet.mergeCells(rowNum, daysCount + 3, rowNum, daysCount + 8);
     const targetCell = sheet.getCell(rowNum, daysCount + 3);
-    targetCell.value = cov.code === 'A' ? 'ธีระกิจ & วรพงษ์ (จ.-ศ.)' : cov.target > 0 ? `เป้าหมาย 7x24: ${cov.target} คน` : '';
+    targetCell.value = cov.code === 'A' ? 'ธีระกิจ (จ.-ศ.)'
+      : cov.code === '1' ? `วรพงษ์ (จ.-ศ.) + หมุนเวียนอีกอย่างน้อย ${cov.target} คน`
+      : cov.target > 0 ? `เป้าหมาย 7x24: ${cov.target} คน` : '';
     targetCell.font = { name: 'Arial', size: 8, color: { argb: 'FF64748B' } };
     targetCell.alignment = { vertical: 'middle', horizontal: 'center' };
     targetCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };

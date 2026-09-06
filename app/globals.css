@@ -530,9 +530,9 @@ body {
   position: sticky !important;
   left: 44px !important;
   z-index: 10 !important;
-  width: 150px;
-  min-width: 150px;
-  max-width: 150px;
+  width: 172px;
+  min-width: 172px;
+  max-width: 172px;
   background: var(--bg-surface);
   text-align: left;
   padding: 0.4rem 0.6rem;
@@ -544,6 +544,14 @@ body {
   user-select: text !important;
   -webkit-user-select: text !important;
   cursor: text;
+}
+
+/* หัวคอลัมน์รายชื่อ: ข้อความไทย ใช้ฟอนต์ sans ให้ความกว้างคาดเดาได้ */
+.roster-table thead th.col-sticky-name.day-num-cell {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  letter-spacing: 0;
+  padding-left: 0.85rem;
 }
 
 /* Th Top sticky corners */

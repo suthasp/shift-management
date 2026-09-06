@@ -251,11 +251,48 @@ export function checkComplianceViolations(schedule, staffList, daysCount) {
 /**
  * Smart Auto-Scheduler Algorithm for Data Center 24/7 Operations
  * Generates an optimal, balanced roster:
- * 1. ธีระกิจ & วรพงษ์ stand on Shift A (Mon-Fri), Weekend H
- * 2. Equal off days (H) across all rotating staff in every month (8 days off)
- * 3. 7x24 Operations: Shift 3 = 2, Shift 2 = 2, Shift 1 = 1 (minimum)
- * 4. "ถ้ามีคนเหลือเกินให้ลงกะ1" -> All surplus staff assigned to Shift 1!
+ * 1. ธีระกิจ ยืนประจำกะ A (จันทร์-ศุกร์), เสาร์-อาทิตย์ หยุด (H)
+ * 2. วรพงษ์ ยืนประจำกะ 1 (จันทร์-ศุกร์), เสาร์-อาทิตย์ หยุด (H)
+ *    และต้องมีเจ้าหน้าที่หมุนเวียนลงกะ 1 ร่วมด้วยอย่างน้อยอีก 1 คนในทุกวัน
+ * 3. Equal off days (H) across all rotating staff in every month (8 days off)
+ * 4. 7x24 Operations: Shift 3 = 2, Shift 2 = 2, Shift 1 = 1 (minimum)
+ * 5. "ถ้ามีคนเหลือเกินให้ลงกะ1" -> All surplus staff assigned to Shift 1!
  */
+/**
+ * เจ้าหน้าที่ยืนประจำกะ (จันทร์-ศุกร์) — เสาร์-อาทิตย์ หยุด
+ * ธีระกิจ = กะ A (08:00-17:00), วรพงษ์ = กะ 1 (07:00-16:00)
+ */
+const STANDING_SHIFT_RULES = [
+  { shift: 'A', match: (s) => s.id === 1 || s.name.includes('ธีระกิจ') },
+  { shift: '1', match: (s) => s.id === 2 || s.name.includes('วรพงษ์') }
+];
+
+/**
+ * รับประกันว่าทุกวันต้องมีเจ้าหน้าที่ "หมุนเวียน" ลงกะ 1 อย่างน้อย 1 คน
+ * (นอกเหนือจากวรพงษ์ซึ่งยืนประจำกะ 1 เฉพาะจันทร์-ศุกร์ — เสาร์-อาทิตย์จึงต้องมีคนหมุนเวียนคุมกะ 1 แทน)
+ */
+function ensureRotatingMorningStaff(schedule, rotatingStaff, daysCount, maxStreak = 6) {
+  for (let d = 0; d < daysCount; d++) {
+    const covered = rotatingStaff.some(s => {
+      const code = schedule[s.id][d];
+      return code === '1' || code === 'HT1';
+    });
+    if (covered) continue;
+
+    const candidate = rotatingStaff.find(s => {
+      const row = schedule[s.id];
+      if (row[d] !== 'H') return false;
+      const prev = d > 0 ? row[d - 1] : 'H';
+      if (prev === '3' || prev === 'HT3') return false; // ห้ามกะดึกต่อกะเช้า
+      let streak = 1;
+      for (let i = d - 1; i >= 0 && row[i] !== 'H'; i--) streak++;
+      for (let i = d + 1; i < daysCount && row[i] !== 'H'; i++) streak++;
+      return streak <= maxStreak;
+    });
+    if (candidate) schedule[candidate.id][d] = '1';
+  }
+}
+
 export function generateAutoSchedule({
   staffList,
   daysCount,
@@ -274,14 +311,15 @@ export function generateAutoSchedule({
     newSchedule[s.id] = new Array(daysCount).fill('H');
   });
 
-  // Identify fixed Shift A staff (ธีระกิจ & วรพงษ์)
-  const fixedAStaff = [];
+  // แยกเจ้าหน้าที่ยืนประจำกะ (ธีระกิจ = A, วรพงษ์ = 1) ออกจากกลุ่มหมุนเวียน
+  const standingStaff = [];
   const rotatingStaff = [];
 
   if (fixStaffA) {
     staffList.forEach(s => {
-      if (s.id === 1 || s.id === 2 || s.name.includes('ธีระกิจ') || s.name.includes('วรพงษ์')) {
-        fixedAStaff.push(s);
+      const rule = STANDING_SHIFT_RULES.find(r => r.match(s));
+      if (rule) {
+        standingStaff.push({ staff: s, shift: rule.shift });
       } else {
         rotatingStaff.push(s);
       }
@@ -290,13 +328,11 @@ export function generateAutoSchedule({
     staffList.forEach(s => rotatingStaff.push(s));
   }
 
-  // 1. Assign fixed Shift A staff (ธีระกิจ & วรพงษ์)
-  fixedAStaff.forEach(staff => {
+  // 1. ลงกะยืนประจำ: จันทร์-ศุกร์ = กะประจำของแต่ละคน, เสาร์-อาทิตย์ = หยุด (H)
+  standingStaff.forEach(({ staff, shift }) => {
     for (let d = 0; d < daysCount; d++) {
-      const dayNum = d + 1;
-      const isWknd = isWeekend(year, month, dayNum);
-      // Weekdays = Shift A (08:00 - 17:00), Weekends = Day Off (H)
-      newSchedule[staff.id][d] = isWknd ? 'H' : 'A';
+      const isWknd = isWeekend(year, month, d + 1);
+      newSchedule[staff.id][d] = isWknd ? 'H' : shift;
     }
   });
 
@@ -339,6 +375,7 @@ export function generateAutoSchedule({
       }
     });
 
+    ensureRotatingMorningStaff(newSchedule, rotatingStaff, daysCount);
     return newSchedule;
   }
 
@@ -425,5 +462,6 @@ export function generateAutoSchedule({
     }
   }
 
+  ensureRotatingMorningStaff(newSchedule, rotatingStaff, daysCount);
   return newSchedule;
 }

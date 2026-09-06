@@ -126,7 +126,7 @@ export function AutoScheduleModal({
                   onChange={e => setFixStaffA(e.target.checked)}
                   style={{ accentColor: 'var(--accent-cyan)' }}
                 />
-                <strong>ธีระกิจ พรมตุ้ม & วรพงษ์ ริมสกุล ยืนประจำกะ A (จันทร์-ศุกร์)</strong>
+                <strong>ธีระกิจ ยืนประจำกะ A · วรพงษ์ ยืนประจำกะ 1 (จันทร์-ศุกร์)</strong>
               </label>
 
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.82rem', cursor: 'pointer' }}>

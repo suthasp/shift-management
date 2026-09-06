@@ -183,7 +183,12 @@ export function ShiftTable({
           </div>
           {hoveredShiftInfo.code === 'A' && (
             <div style={{ fontSize: '0.78rem', color: '#ffb74d', marginBottom: 4 }}>
-              👤 เจ้าหน้าที่: ธีระกิจ & วรพงษ์ (จันทร์ - ศุกร์)
+              👤 เจ้าหน้าที่: ธีระกิจ พรมตุ้ม (จันทร์ - ศุกร์)
+            </div>
+          )}
+          {hoveredShiftInfo.code === '1' && (
+            <div style={{ fontSize: '0.78rem', color: '#ffb74d', marginBottom: 4 }}>
+              👤 วรพงษ์ ริมสกุล ยืนประจำ (จันทร์ - ศุกร์) + หมุนเวียนอีกอย่างน้อย 1 คน
             </div>
           )}
           {['1', '2', '3'].includes(hoveredShiftInfo.code) && (
@@ -281,7 +286,7 @@ export function ShiftTable({
             {/* Row 3: Day Numbers (1, 2, ..., 31) */}
             <tr>
               <th className="day-num-cell col-sticky-num">#</th>
-              <th className="day-num-cell col-sticky-name" style={{ textAlign: 'left', paddingLeft: '0.85rem' }}>
+              <th className="day-num-cell col-sticky-name">
                 รายชื่อเจ้าหน้าที่ CNO
               </th>
               {Array.from({ length: daysCount }, (_, i) => {
@@ -386,7 +391,7 @@ export function ShiftTable({
               <td className="col-sticky-num"></td>
               <td 
                 className="col-sticky-name coverage-label-cell"
-                title={`กะปกติ (Shift A)\n⏰ เวลา: 08:00 - 17:00 น. (8 ชม.)\n👤 เจ้าหน้าที่: ธีระกิจ & วรพงษ์ (จันทร์ - ศุกร์)\n📝 หน้าที่: ${SHIFT_TYPES['A']?.description || ''}`}
+                title={`กะปกติ (Shift A)\n⏰ เวลา: 08:00 - 17:00 น. (8 ชม.)\n👤 เจ้าหน้าที่: ธีระกิจ พรมตุ้ม (จันทร์ - ศุกร์)\n📝 หน้าที่: ${SHIFT_TYPES['A']?.description || ''}`}
                 onMouseEnter={(e) => handleHoverShift('A', e)}
                 onMouseLeave={handleLeaveShift}
               >
@@ -397,20 +402,20 @@ export function ShiftTable({
                 const count = dayCov.counts['A'];
                 const dow = getDayOfWeek(year, month, d + 1);
                 const isWknd = dow === 0 || dow === 6;
-                const isTargetMet = isWknd ? count === 0 : count >= 2;
+                const isTargetMet = isWknd ? count === 0 : count >= 1;
                 return (
-                  <td 
-                    key={`cov-a-${d}`} 
-                    className={`coverage-cell ${!isWknd && count < 2 ? 'coverage-warning' : 'coverage-ok'}`}
+                  <td
+                    key={`cov-a-${d}`}
+                    className={`coverage-cell ${!isWknd && count < 1 ? 'coverage-warning' : 'coverage-ok'}`}
                     style={{ color: '#ffb74d' }}
-                    title={`วันที่ ${d + 1}: กะ A มี ${count} คน (ธีระกิจ & วรพงษ์)`}
+                    title={`วันที่ ${d + 1}: กะ A มี ${count} คน (ธีระกิจ)`}
                   >
                     {count}
                   </td>
                 );
               })}
               <td colSpan={6} className="col-summary-cell" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                ธีระกิจ & วรพงษ์ (จ.-ศ.)
+                ธีระกิจ (จ.-ศ.)
               </td>
             </tr>
 
