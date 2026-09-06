@@ -206,6 +206,41 @@ body {
   flex-wrap: wrap;
 }
 
+/* ป้ายสถานะซิงก์ Google Sheet */
+.sheet-sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 34px;
+  padding: 0 0.7rem;
+  font-family: var(--font-sans);
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--bg-surface-elevated);
+  border: 1px solid currentColor;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.sheet-sync-badge:hover:not(:disabled) {
+  background: var(--bg-surface-hover);
+}
+
+.sheet-sync-badge:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.sheet-sync-spin {
+  animation: sheet-sync-rotate 1s linear infinite;
+}
+
+@keyframes sheet-sync-rotate {
+  to { transform: rotate(360deg); }
+}
+
 /* Month & Year Picker Component */
 .month-selector {
   display: flex;

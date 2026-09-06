@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
   INITIAL_STAFF, 
   INITIAL_OCTOBER_ROSTER, 
@@ -23,6 +23,22 @@ import { ShiftSwapModal } from '../components/ShiftSwapModal';
 import { AnalyticsModal } from '../components/AnalyticsModal';
 import { AutoScheduleModal } from '../components/AutoScheduleModal';
 import { StaffModal } from '../components/StaffModal';
+import { fetchMonthFromSheet } from '../utils/sheetSync';
+
+/** ดึงจากชีตซ้ำทุก 1 นาที (Google แคชไฟล์ที่เผยแพร่ราว 5 นาที ถี่กว่านี้ไม่ได้ข้อมูลใหม่) */
+const SHEET_POLL_MS = 60 * 1000;
+const EDITED_MONTHS_KEY = 'dc_sheet_edited_months';
+
+const monthKey = (yr, mo) => `${yr}-${mo}`;
+
+function loadEditedMonths() {
+  try {
+    const raw = localStorage.getItem(EDITED_MONTHS_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
 
 // Helper to safely get roster for any month
 function getInitialRoster(yr, mo, staff = INITIAL_STAFF, setts = DC_SETTINGS_DEFAULT) {
@@ -91,6 +107,34 @@ export default function Home() {
   const [isStaffOpen, setIsStaffOpen] = useState(false);
   const [pickerTarget, setPickerTarget] = useState(null); // { staffId, dayIndex }
 
+  // --- ซิงก์กับ Google Sheet ---------------------------------------------
+  // โหมดผสม: ดึงอัตโนมัติ จนกว่าผู้ใช้จะแก้กะของเดือนนั้นเอง แล้วจึงหยุดจนกดดึงใหม่
+  const [sheetStatus, setSheetStatus] = useState({ status: 'idle' });
+  const [editedMonths, setEditedMonths] = useState(() => new Set());
+  const staffListRef = useRef(staffList);
+  const applyingSheetRef = useRef(false);
+
+  useEffect(() => { staffListRef.current = staffList; }, [staffList]);
+
+  const isMonthLocked = editedMonths.has(monthKey(year, month));
+
+  /** เรียกเมื่อผู้ใช้แก้ตารางเอง เพื่อหยุด auto-sync ของเดือนนั้น */
+  const markMonthEdited = useCallback(() => {
+    if (applyingSheetRef.current) return; // การเขียนจากชีตไม่นับเป็นการแก้เอง
+    const key = monthKey(year, month);
+    setEditedMonths(prev => {
+      if (prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.add(key);
+      try {
+        localStorage.setItem(EDITED_MONTHS_KEY, JSON.stringify([...next]));
+      } catch (e) {
+        console.warn('LocalStorage error:', e);
+      }
+      return next;
+    });
+  }, [year, month]);
+
   // Load from localStorage after mount to prevent SSR hydration mismatch
   useEffect(() => {
     setMounted(true);
@@ -104,6 +148,7 @@ export default function Home() {
         setTheme(savedTheme);
         document.documentElement.setAttribute('data-theme', savedTheme);
       }
+      setEditedMonths(loadEditedMonths());
       let currentStaff = INITIAL_STAFF;
       const savedStaff = localStorage.getItem('dc_shift_staff_list');
       if (savedStaff) {
@@ -168,6 +213,74 @@ export default function Home() {
     setSchedule(getInitialRoster(year, month, staffList, settings));
   }, [year, month, daysCount, mounted, settings]);
 
+  /**
+   * ดึงตารางกะของเดือนที่เลือกจาก Google Sheet มาทับ
+   * force = true คือผู้ใช้กดเอง จะปลดล็อกเดือนนั้นให้กลับมาซิงก์อัตโนมัติด้วย
+   */
+  const syncFromSheet = useCallback(async ({ force = false } = {}) => {
+    const key = monthKey(year, month);
+    setSheetStatus(s => ({ ...s, status: 'loading' }));
+    try {
+      const result = await fetchMonthFromSheet({
+        year,
+        month,
+        staffList: staffListRef.current,
+        daysCount
+      });
+
+      if (result.status === 'no-tab') {
+        // เดือนนี้ยังไม่มีในชีต -> คงตารางที่แอปสร้างเองไว้
+        setSheetStatus({
+          status: 'no-tab',
+          fetchedAt: result.fetchedAt,
+          availableTabs: result.availableTabs
+        });
+        return;
+      }
+
+      applyingSheetRef.current = true;
+      setSchedule(result.schedule);
+      // ปลดธงหลัง React เขียน state เสร็จ ไม่งั้นการแก้ครั้งถัดไปจะไม่ถูกนับ
+      setTimeout(() => { applyingSheetRef.current = false; }, 0);
+
+      if (force) {
+        setEditedMonths(prev => {
+          if (!prev.has(key)) return prev;
+          const next = new Set(prev);
+          next.delete(key);
+          try {
+            localStorage.setItem(EDITED_MONTHS_KEY, JSON.stringify([...next]));
+          } catch (e) {
+            console.warn('LocalStorage error:', e);
+          }
+          return next;
+        });
+      }
+
+      setSheetStatus({
+        status: 'synced',
+        tabName: result.tabName,
+        fetchedAt: result.fetchedAt,
+        unmatchedRows: result.unmatchedRows,
+        missingStaff: result.missingStaff,
+        unknownCodes: result.unknownCodes
+      });
+    } catch (err) {
+      setSheetStatus({ status: 'error', error: err.message, fetchedAt: Date.now() });
+    }
+  }, [year, month, daysCount]);
+
+  // ดึงอัตโนมัติเมื่อเปิดแอป / เปลี่ยนเดือน แล้ววนซ้ำตามรอบ
+  // ข้ามไปถ้าเดือนนี้ถูกแก้ในแอปแล้ว (ผู้ใช้ต้องกดปุ่มเองเพื่อดึงทับ)
+  useEffect(() => {
+    if (!mounted) return;
+    if (isMonthLocked) return;
+
+    syncFromSheet();
+    const id = setInterval(() => syncFromSheet(), SHEET_POLL_MS);
+    return () => clearInterval(id);
+  }, [mounted, isMonthLocked, syncFromSheet]);
+
   // Calculations
   const dailyCoverage = useMemo(() => {
     return calculateDailyCoverage(schedule, staffList, daysCount, settings);
@@ -189,6 +302,7 @@ export default function Home() {
 
   // Cell Change Handler
   const handleCellChange = (staffId, dayIndex, newShift) => {
+    markMonthEdited();
     setSchedule(prev => {
       const currentStaffShifts = prev[staffId] ? [...prev[staffId]] : new Array(daysCount).fill('H');
       while (currentStaffShifts.length < daysCount) {
@@ -204,6 +318,7 @@ export default function Home() {
 
   // Batch Fill
   const handleBatchApply = (staffId, startDay, endDay, shiftCode) => {
+    markMonthEdited();
     setSchedule(prev => {
       const current = prev[staffId] ? [...prev[staffId]] : new Array(daysCount).fill('H');
       for (let d = startDay; d <= endDay; d++) {
@@ -218,6 +333,7 @@ export default function Home() {
 
   // Shift Swap Handler
   const handleConfirmSwap = ({ staffAId, dayA, shiftA, staffBId, dayB, shiftB }) => {
+    markMonthEdited();
     setSchedule(prev => {
       const nextA = prev[staffAId] ? [...prev[staffAId]] : new Array(daysCount).fill('H');
       const nextB = prev[staffBId] ? [...prev[staffBId]] : new Array(daysCount).fill('H');
@@ -244,6 +360,7 @@ export default function Home() {
         minPerShift,
         fixStaffA
       });
+      markMonthEdited();
       setSchedule(generated);
     } catch (err) {
       alert(err.message || 'ไม่สามารถจัดกะอัตโนมัติได้');
@@ -274,9 +391,13 @@ export default function Home() {
       setMonth(10);
       setStaffList(INITIAL_STAFF);
       setSchedule(INITIAL_OCTOBER_ROSTER);
+      // ปลดล็อกทุกเดือน เพื่อให้กลับไปซิงก์อัตโนมัติจากชีตอีกครั้ง
+      setEditedMonths(new Set());
+      setSheetStatus({ status: 'idle' });
       try {
         localStorage.removeItem('dc_shift_staff_list');
         localStorage.removeItem('dc_shift_schedule_2026_10');
+        localStorage.removeItem(EDITED_MONTHS_KEY);
       } catch (e) {
         // ignore
       }
@@ -334,6 +455,8 @@ export default function Home() {
         onExportExcel={handleExportExcel}
         onPrint={() => window.print()}
         onResetDefault={handleResetDefault}
+        sheetSync={{ ...sheetStatus, locked: isMonthLocked }}
+        onSheetSync={() => syncFromSheet({ force: true })}
       />
 
       {/* Real-time Status / KPI Bar */}

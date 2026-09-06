@@ -15,6 +15,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { BrandMark } from './BrandMark';
+import { SheetSyncBadge } from './SheetSyncBadge';
 import { THAI_MONTHS } from '../data/initialData';
 
 export function Header({
@@ -30,7 +31,9 @@ export function Header({
   onOpenStaff,
   onExportExcel,
   onPrint,
-  onResetDefault
+  onResetDefault,
+  sheetSync,
+  onSheetSync
 }) {
   const toggleTheme = () => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
@@ -96,6 +99,9 @@ export function Header({
               ))}
             </select>
           </div>
+
+          {/* สถานะซิงก์กับ Google Sheet ของเดือนที่เลือก */}
+          {sheetSync && <SheetSyncBadge state={sheetSync} onSync={onSheetSync} />}
 
           {/* Auto-Scheduler Button */}
           <button 
