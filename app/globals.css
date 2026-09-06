@@ -1134,20 +1134,133 @@ thead th.col-sticky-name,
     border: none !important;
     box-shadow: none !important;
   }
+
+  /* กล่อง scroll ของหน้าจอจะ "ตัด" ตารางทิ้งตอนพิมพ์ ต้องปลดทุกชั้นให้มองเห็นได้หมด */
+  html,
+  body,
+  .app-container,
+  .main-content,
+  .roster-card,
+  .roster-table-wrapper {
+    overflow: visible !important;
+  }
+
+  /* บีบตารางให้พอดีความกว้างกระดาษเสมอ ไม่ว่าเดือนนั้นจะมี 28 หรือ 31 วัน
+     table-layout: fixed ทำให้คอลัมน์หารพื้นที่กันเอง จึงไม่มีทางล้นหน้า */
+  .roster-table {
+    width: 100% !important;
+    /* <table> มี inline min-width เท่าความกว้างบนหน้าจอ (≈1654px) ถ้าไม่ปลด
+       width:100% จะไม่มีผลเลย เพราะ min-width ดันความกว้างใช้งานไว้ */
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    font-size: 6.5pt !important;
+  }
+
   .roster-table th,
   .roster-table td {
     border: 1px solid #000000 !important;
     color: #000000 !important;
+    padding: 1px 0 !important;
+    font-size: 6.5pt !important;
+    line-height: 1.3 !important;
+    overflow: hidden !important;
   }
+
   .col-sticky-num,
-  .col-sticky-name {
-    position: static !important;
+  .roster-table th.col-sticky-num,
+  .roster-table td.col-sticky-num {
+    width: 16px !important;
+    min-width: 16px !important;
+    max-width: 16px !important;
+  }
+
+  .col-sticky-name,
+  .roster-table th.col-sticky-name,
+  .roster-table td.col-sticky-name {
+    width: 96px !important;
+    min-width: 96px !important;
+    max-width: 96px !important;
+    padding: 1px 3px !important;
+    font-size: 6.5pt !important;
+  }
+
+  .col-summary-header,
+  .col-summary-cell {
+    width: 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
+    white-space: normal !important;
+  }
+
+  /* ตารางมี <colgroup> ที่กำหนดความกว้างแบบ inline (44 + 150 + 38 ต่อวัน + คอลัมน์สรุป)
+     รวมแล้วราว 1654px กว้างเกิน A4 แนวนอน และใน table-layout: fixed ค่าจาก <col>
+     มาก่อนความกว้างของเซลล์ จึงต้อง override ที่ <col> ตรง ๆ (ต้องใช้ !important จึงจะชนะ inline style)
+     ปล่อยคอลัมน์วันเป็น auto เพื่อให้หารพื้นที่ที่เหลือกันเอง รองรับทั้งเดือน 28 และ 31 วัน */
+  .roster-table col { width: auto !important; }
+  .roster-table col:nth-child(1) { width: 16px !important; }
+  .roster-table col:nth-child(2) { width: 96px !important; }
+  .roster-table col:nth-last-child(-n + 6) { width: 30px !important; }
+
+  /* ช่องวันบนหน้าจอตรึงไว้ที่ 38px ซึ่งกว้างเกินกระดาษเมื่อมี 31 วัน
+     ปลดออกเพื่อให้ table-layout: fixed หารพื้นที่ที่เหลือเองได้ */
+  .dow-header-cell,
+  .day-num-cell,
+  .shift-cell,
+  .coverage-cell {
+    width: auto !important;
+    min-width: 0 !important;
+    height: auto !important;
+  }
+
+  /* ป้ายรหัสกะในเซลล์ ย่อลงให้พอดีช่องที่แคบลง */
+  .roster-table .shift-tag {
+    width: auto !important;
+    height: auto !important;
+    min-width: 0 !important;
+    font-size: 6.5pt !important;
     box-shadow: none !important;
   }
-  .cell-shift-1 { background-color: #00e5ff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .cell-shift-2 { background-color: #00e676 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .cell-shift-3 { background-color: #ffb2dd !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .cell-shift-a { background-color: #90caf9 !important; color: #0f172a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .cell-shift-h { background-color: #ffeb3b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .cell-shift-ht1, .cell-shift-ht2, .cell-shift-ht3 { background-color: #d9a300 !important; color: #3e2723 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  /* ต้องไล่ specificity ให้ชนะ .roster-table th.col-sticky-name { position: sticky !important }
+     ไม่งั้นคอลัมน์ชื่อยังลอยทับคอลัมน์วันที่ 1 อยู่เหมือนตอนอยู่บนหน้าจอ */
+  .col-sticky-num,
+  .col-sticky-name,
+  .roster-table th.col-sticky-num,
+  .roster-table td.col-sticky-num,
+  .roster-table th.col-sticky-name,
+  .roster-table td.col-sticky-name,
+  .roster-table thead th.col-sticky-num,
+  .roster-table thead th.col-sticky-name {
+    position: static !important;
+    left: auto !important;
+    z-index: auto !important;
+    box-shadow: none !important;
+  }
+
+  /* พื้นหลังธีมมืดจะกลายเป็นแผ่นดำถ้าผู้ใช้เปิด "Background graphics" ตอนพิมพ์
+     ตั้งพื้นขาวเป็นค่าตั้งต้นก่อน แล้วค่อยทาสีกะทับด้านล่าง
+     หมายเหตุ: กฎด้านล่างต้องเขียนเป็น .roster-table td.cell-* (0,2,1)
+     ให้ specificity สูงกว่ากฎพื้นขาว .roster-table td (0,1,1) ไม่งั้นสีกะจะหายหมด */
+  .roster-card,
+  .roster-table th,
+  .roster-table td {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+  }
+
+  .roster-table td.cell-shift-1 { background-color: #00e5ff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .roster-table td.cell-shift-2 { background-color: #00e676 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .roster-table td.cell-shift-3 { background-color: #ffb2dd !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .roster-table td.cell-shift-a { background-color: #90caf9 !important; color: #0f172a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .roster-table td.cell-shift-h { background-color: #ffeb3b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  /* รหัส HT มี 3 ตัวอักษร ช่องวันกว้างราว 25px จึงต้องย่อลงอีกขั้นไม่ให้ล้นขอบ */
+  .roster-table td.cell-shift-ht1,
+  .roster-table td.cell-shift-ht2,
+  .roster-table td.cell-shift-ht3 { background-color: #d9a300 !important; color: #3e2723 !important; font-size: 5pt !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .roster-table td.cell-shift-l { background-color: #94a3b8 !important; color: #0f172a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .roster-table td.cell-shift-v { background-color: #2dd4bf !important; color: #042f2e !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* คงแถบวันเสาร์-อาทิตย์ไว้ ช่วยให้อ่านตารางที่พิมพ์ออกมาง่ายขึ้นมาก */
+  .roster-table th.dow-sat { background-color: #9333ea !important; color: #ffffff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .roster-table th.dow-sun { background-color: #dc2626 !important; color: #ffffff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
