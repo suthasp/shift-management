@@ -3,6 +3,15 @@ import './globals.css';
 export const metadata = {
   title: 'DC Shift Manager | ระบบจัดการตารางกะศูนย์ข้อมูล 24/7',
   description: 'ระบบกำหนดและบริหารจัดการตารางกะเจ้าหน้าที่ศูนย์ข้อมูล Data Center 24/7 Mission Critical',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: '16x16 32x32 48x48 64x64 128x128' },
+      { url: '/icon-192.png', type: 'image/png', sizes: '192x192' },
+      { url: '/icon-512.png', type: 'image/png', sizes: '512x512' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
 };
 
 export default function RootLayout({ children }) {
