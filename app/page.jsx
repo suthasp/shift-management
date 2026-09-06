@@ -288,7 +288,7 @@ export default function Home() {
     const newId = Date.now();
     const created = {
       id: newId,
-      empCode: `DC-0${staffList.length + 1}`,
+      empCode: `CNO-0${staffList.length + 1}`,
       name: newStaffData.name,
       position: newStaffData.position,
       phone: newStaffData.phone

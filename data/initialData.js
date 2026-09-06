@@ -185,23 +185,23 @@ export const OT_CLAIM_RULES = [
 export const INITIAL_STAFF = [
   {
     id: 1,
-    empCode: 'DC-001',
+    empCode: 'CNO-001',
     name: 'ธีระกิจ พรมตุ้ม',
-    position: 'Senior DC Operations Specialist',
+    position: 'Senior CNO Operations Specialist',
     phone: '081-456-7890',
     minRestHours: 12
   },
   {
     id: 2,
-    empCode: 'DC-002',
+    empCode: 'CNO-002',
     name: 'วรพงษ์ ริมสกุล',
-    position: 'DC Facilities Lead Engineer',
+    position: 'CNO Facilities Lead Engineer',
     phone: '082-567-8901',
     minRestHours: 12
   },
   {
     id: 3,
-    empCode: 'DC-003',
+    empCode: 'CNO-003',
     name: 'กฤษณพน จตุรบูรณ์',
     position: 'NOC & Network Systems Engineer',
     phone: '083-678-9012',
@@ -209,7 +209,7 @@ export const INITIAL_STAFF = [
   },
   {
     id: 4,
-    empCode: 'DC-004',
+    empCode: 'CNO-004',
     name: 'สิทธิชัย ตั้งจิตอัจนา',
     position: 'Systems & Server Operator',
     phone: '084-789-0123',
@@ -217,15 +217,15 @@ export const INITIAL_STAFF = [
   },
   {
     id: 5,
-    empCode: 'DC-005',
+    empCode: 'CNO-005',
     name: 'ไพศาล เกรียงไกรวิท',
-    position: 'DC Infrastructure Specialist',
+    position: 'CNO Infrastructure Specialist',
     phone: '085-890-1234',
     minRestHours: 12
   },
   {
     id: 6,
-    empCode: 'DC-006',
+    empCode: 'CNO-006',
     name: 'ภูชิต แสงสวรรค์',
     position: 'NOC Monitoring Specialist',
     phone: '086-901-2345',
@@ -233,25 +233,25 @@ export const INITIAL_STAFF = [
   },
   {
     id: 7,
-    empCode: 'DC-007',
+    empCode: 'CNO-007',
     name: 'ดุลยกิตต์ อุทิตะสาร',
-    position: 'DC Operations Staff',
+    position: 'CNO Operations Staff',
     phone: '087-012-3456',
     minRestHours: 12
   },
   {
     id: 8,
-    empCode: 'DC-008',
+    empCode: 'CNO-008',
     name: 'วินัย แสงใส',
-    position: 'DC Operations Staff',
+    position: 'CNO Operations Staff',
     phone: '088-123-4567',
     minRestHours: 12
   },
   {
     id: 9,
-    empCode: 'DC-009',
+    empCode: 'CNO-009',
     name: 'พีระเดช ป้องภัย',
-    position: 'DC Operations Staff',
+    position: 'CNO Operations Staff',
     phone: '089-234-5678',
     minRestHours: 12
   }

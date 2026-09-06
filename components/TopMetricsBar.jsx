@@ -32,7 +32,7 @@ export function TopMetricsBar({
       <div className="top-metric-inner">
         {/* Status Badges */}
         <div className="dc-status-badges">
-          {/* DC 24/7 Coverage Status */}
+          {/* CNO 24/7 Coverage Status */}
           <div className="status-badge-item">
             {deficitDays.length === 0 ? (
               <>

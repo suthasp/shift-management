@@ -18,7 +18,7 @@ export function StaffModal({
   const [editingId, setEditingId] = useState(null);
 
   const [newName, setNewName] = useState('');
-  const [newPosition, setNewPosition] = useState('DC Operations Staff');
+  const [newPosition, setNewPosition] = useState('CNO Operations Staff');
   const [newPhone, setNewPhone] = useState('');
 
   const handleAddSubmit = (e) => {
@@ -32,7 +32,7 @@ export function StaffModal({
     });
 
     setNewName('');
-    setNewPosition('DC Operations Staff');
+    setNewPosition('CNO Operations Staff');
     setNewPhone('');
     setIsAdding(false);
   };
@@ -62,7 +62,7 @@ export function StaffModal({
           {!isAdding ? (
             <div style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                รายชื่อเจ้าหน้าที่ที่ได้รับมอบหมายดูแลระบบ DC ประจำตาราง
+                รายชื่อเจ้าหน้าที่ที่ได้รับมอบหมายดูแลระบบ CNO ประจำตาราง
               </span>
               <button className="btn btn-primary" onClick={() => setIsAdding(true)}>
                 <Plus size={16} />
@@ -90,7 +90,7 @@ export function StaffModal({
                   <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>ตำแหน่ง:</label>
                   <input
                     type="text"
-                    placeholder="DC Operations Specialist"
+                    placeholder="CNO Operations Specialist"
                     className="form-control"
                     value={newPosition}
                     onChange={e => setNewPosition(e.target.value)}

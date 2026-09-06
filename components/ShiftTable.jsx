@@ -282,7 +282,7 @@ export function ShiftTable({
             <tr>
               <th className="day-num-cell col-sticky-num">#</th>
               <th className="day-num-cell col-sticky-name" style={{ textAlign: 'left', paddingLeft: '0.85rem' }}>
-                รายชื่อเจ้าหน้าที่ DC
+                รายชื่อเจ้าหน้าที่ CNO
               </th>
               {Array.from({ length: daysCount }, (_, i) => {
                 const dayNum = i + 1;

@@ -54,7 +54,7 @@ export async function exportRosterToExcel({ schedule, staffList, year, month, da
   const ExcelJSModule = await import('exceljs');
   const ExcelJS = ExcelJSModule.default || ExcelJSModule;
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'DC Shift Management System';
+  workbook.creator = 'CNO Shift Management System';
   workbook.created = new Date();
 
   const sheet = workbook.addWorksheet(`${monthNameEng}_${year + 543}`, {
@@ -384,14 +384,14 @@ export async function exportRosterToExcel({ schedule, staffList, year, month, da
     const url = window.URL.createObjectURL(blob);
     const downloadAnchor = document.createElement('a');
     downloadAnchor.href = url;
-    downloadAnchor.download = `DC_Shift_Schedule_${monthNameEng}_${year + 543}.xlsx`;
+    downloadAnchor.download = `CNO_Shift_Schedule_${monthNameEng}_${year + 543}.xlsx`;
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
     window.URL.revokeObjectURL(url);
   } else {
     // Server / Node.js test environment
-    await workbook.xlsx.writeFile(`DC_Shift_Schedule_${monthNameEng}_${year + 543}.xlsx`);
+    await workbook.xlsx.writeFile(`CNO_Shift_Schedule_${monthNameEng}_${year + 543}.xlsx`);
   }
 }
 
@@ -402,7 +402,7 @@ export function exportBackupJSON(state) {
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
   const downloadAnchor = document.createElement('a');
   downloadAnchor.setAttribute("href", dataStr);
-  downloadAnchor.setAttribute("download", `DC_Shift_Backup_${new Date().toISOString().slice(0,10)}.json`);
+  downloadAnchor.setAttribute("download", `CNO_Shift_Backup_${new Date().toISOString().slice(0,10)}.json`);
   document.body.appendChild(downloadAnchor);
   downloadAnchor.click();
   downloadAnchor.remove();

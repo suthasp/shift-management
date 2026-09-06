@@ -3,10 +3,10 @@
 import React from 'react';
 
 /**
- * ตราสัญลักษณ์ DC Shift Roster — หน้าปัดกะ 24 ชม.
+ * ตราสัญลักษณ์ CNO Shift Roster — หน้าปัดกะ 24 ชม.
  * วงแหวนแบ่ง 3 ส่วนแทนรอบกะหมุนเวียน ใช้ชุดสีเดียวกับ favicon
  */
-export function BrandMark({ size = 24, title = 'DC Shift Roster' }) {
+export function BrandMark({ size = 24, title = 'CNO Shift Roster' }) {
   return (
     <svg
       width={size}

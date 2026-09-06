@@ -51,7 +51,7 @@ export function Header({
           </div>
           <div className="brand-text">
             <h1>
-              <span>DC Shift Roster</span>
+              <span>CNO Shift Roster</span>
               <span style={{ 
                 fontSize: '0.68rem', 
                 background: 'rgba(0, 229, 255, 0.15)', 
@@ -131,7 +131,7 @@ export function Header({
           <button 
             className="btn btn-secondary"
             onClick={onOpenStaff}
-            title="จัดการรายชื่อเจ้าหน้าที่ DC"
+            title="จัดการรายชื่อเจ้าหน้าที่ CNO"
           >
             <Users size={16} />
             <span>พนักงาน</span>

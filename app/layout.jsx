@@ -1,7 +1,7 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'DC Shift Manager | ระบบจัดการตารางกะศูนย์ข้อมูล 24/7',
+  title: 'CNO Shift Manager | ระบบจัดการตารางกะศูนย์ข้อมูล 24/7',
   description: 'ระบบกำหนดและบริหารจัดการตารางกะเจ้าหน้าที่ศูนย์ข้อมูล Data Center 24/7 Mission Critical',
   icons: {
     icon: [

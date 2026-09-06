@@ -60,7 +60,7 @@ export function AnalyticsModal({
           {/* Top KPI Cards */}
           <div className="stats-grid">
             <div className="stat-box">
-              <span className="stat-box-title">ชั่วโมงปฏิบัติงานรวมทั้ง DC</span>
+              <span className="stat-box-title">ชั่วโมงปฏิบัติงานรวมทั้ง CNO</span>
               <span className="stat-box-value" style={{ color: 'var(--accent-cyan)' }}>
                 {totalDCHours.toLocaleString()} <span style={{ fontSize: '1rem' }}>ชม.</span>
               </span>
@@ -201,7 +201,7 @@ export function AnalyticsModal({
                 <span>📋 เงื่อนไขการเบิกเงินค่าล่วงเวลา (OT Claim Conditions)</span>
               </h4>
               <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                สรุปตามประกาศระเบียบการเบิกจ่ายค่าตอบแทนงานล่วงเวลา DC
+                สรุปตามประกาศระเบียบการเบิกจ่ายค่าตอบแทนงานล่วงเวลา CNO
               </span>
             </div>
 
