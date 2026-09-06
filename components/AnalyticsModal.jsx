@@ -5,8 +5,8 @@ import { BarChart3, X, DollarSign, Clock, Moon, ShieldAlert, Award, Download } f
 import { calculateStaffIncome } from '../utils/schedulerEngine';
 import { THAI_MONTHS, OT_CLAIM_RULES, COMPENSATION_DEFAULT } from '../data/initialData';
 
-const baht = (n) => '฿' + n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const bahtInt = (n) => '฿' + Math.round(n).toLocaleString('th-TH');
+const baht = (n) => n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const bahtInt = (n) => Math.round(n).toLocaleString('th-TH');
 
 export function AnalyticsModal({
   isOpen,
