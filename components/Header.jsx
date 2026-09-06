@@ -9,7 +9,6 @@ import {
   Users, 
   Download, 
   Printer, 
-  RotateCcw, 
   Sun, 
   Moon,
   ShieldCheck
@@ -31,7 +30,6 @@ export function Header({
   onOpenStaff,
   onExportExcel,
   onPrint,
-  onResetDefault,
   sheetSync,
   onSheetSync
 }) {
@@ -160,15 +158,6 @@ export function Header({
             title="พิมพ์ตาราง หรือบันทึกเป็น PDF (A4 แนวนอน)"
           >
             <Printer size={16} />
-          </button>
-
-          {/* Reset */}
-          <button 
-            className="btn btn-secondary btn-icon-only"
-            onClick={onResetDefault}
-            title="รีเซ็ตกลับเป็นตารางเดือนตุลาคมเริ่มต้น (ตามรูปตัวอย่าง)"
-          >
-            <RotateCcw size={16} />
           </button>
 
           {/* Theme Switcher */}

@@ -384,26 +384,6 @@ export default function Home() {
     }
   };
 
-  // Reset to default
-  const handleResetDefault = () => {
-    if (confirm('คุณต้องการรีเซ็ตตารางกะกลับเป็นค่าเริ่มต้นตามเอกสารภาพตัวอย่างหรือไม่?')) {
-      setYear(2026);
-      setMonth(10);
-      setStaffList(INITIAL_STAFF);
-      setSchedule(INITIAL_OCTOBER_ROSTER);
-      // ปลดล็อกทุกเดือน เพื่อให้กลับไปซิงก์อัตโนมัติจากชีตอีกครั้ง
-      setEditedMonths(new Set());
-      setSheetStatus({ status: 'idle' });
-      try {
-        localStorage.removeItem('dc_shift_staff_list');
-        localStorage.removeItem('dc_shift_schedule_2026_10');
-        localStorage.removeItem(EDITED_MONTHS_KEY);
-      } catch (e) {
-        // ignore
-      }
-    }
-  };
-
   // Staff CRUD
   const handleAddStaff = (newStaffData) => {
     const newId = Date.now();
@@ -454,7 +434,6 @@ export default function Home() {
         onOpenStaff={() => setIsStaffOpen(true)}
         onExportExcel={handleExportExcel}
         onPrint={() => window.print()}
-        onResetDefault={handleResetDefault}
         sheetSync={{ ...sheetStatus, locked: isMonthLocked }}
         onSheetSync={() => syncFromSheet({ force: true })}
       />
