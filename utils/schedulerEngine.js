@@ -1,4 +1,4 @@
-import { SHIFT_TYPES, DC_SETTINGS_DEFAULT } from '../data/initialData.js';
+import { SHIFT_TYPES, DC_SETTINGS_DEFAULT, COMPENSATION_DEFAULT } from '../data/initialData.js';
 
 /**
  * Get days in a given month and year
@@ -172,6 +172,87 @@ export function calculateStaffSummary(schedule, staffList, daysCount, year, mont
       weekendAllowance,
       estimatedOTAllowance,
       totalEstimatedAllowance
+    };
+  });
+}
+
+/**
+ * คำนวณรายได้รายบุคคลจากตารางกะจริง
+ *
+ * เงินเดือน + ค่ากะ + ค่าแท็กซี่ + OT
+ *   ค่ากะ/ค่าแท็กซี่ : ผูกกับกะที่ลงจริง โดย HT2 นับเป็นกะบ่าย และ HT3 นับเป็นกะดึก
+ *   OT              : เฉพาะกะ HT = ชั่วโมงกะ x ค่าแรงต่อชั่วโมง x ตัวคูณ
+ *   วันลา (H/L/V)   : ไม่ได้ค่ากะและค่าแท็กซี่ แต่เงินเดือนยังเต็มจำนวน
+ *
+ * ตัวเลขทั้งหมดคิดจาก schedule ที่ส่งเข้ามา ซึ่งซิงก์มาจาก Google Sheet
+ * จึงอัปเดตตามชีตโดยอัตโนมัติ
+ */
+export function calculateStaffIncome(schedule, staffList, daysCount, compensation = COMPENSATION_DEFAULT) {
+  const c = { ...COMPENSATION_DEFAULT, ...compensation };
+  const shiftAllowance = { ...COMPENSATION_DEFAULT.shiftAllowance, ...(compensation?.shiftAllowance || {}) };
+  const taxiAllowance = { ...COMPENSATION_DEFAULT.taxiAllowance, ...(compensation?.taxiAllowance || {}) };
+
+  // HT ใช้อัตราของกะฐาน: HT1 -> 1, HT2 -> 2, HT3 -> 3
+  const baseShiftOf = (code) => {
+    if (code === 'HT1') return '1';
+    if (code === 'HT2') return '2';
+    if (code === 'HT3') return '3';
+    return code;
+  };
+
+  return staffList.map(staff => {
+    const shifts = schedule[staff.id] || [];
+    const counts = {
+      '1': 0, '2': 0, '3': 0, 'A': 0, 'H': 0, 'L': 0, 'V': 0,
+      'HT1': 0, 'HT2': 0, 'HT3': 0
+    };
+
+    let workShifts = 0;
+    let otShifts = 0;
+    let allowancePay = 0;
+    let taxiPay = 0;
+
+    for (let d = 0; d < daysCount; d++) {
+      const code = shifts[d] || 'H';
+      if (counts[code] !== undefined) counts[code]++;
+
+      const isOT = code === 'HT1' || code === 'HT2' || code === 'HT3';
+      const isWork = isOT || code === '1' || code === '2' || code === '3' || code === 'A';
+      if (!isWork) continue;
+
+      workShifts++;
+      if (isOT) otShifts++;
+
+      const base = baseShiftOf(code);
+      allowancePay += shiftAllowance[base] || 0;
+      taxiPay += taxiAllowance[base] || 0;
+    }
+
+    const workHours = workShifts * c.shiftHours;
+    const otHours = otShifts * c.shiftHours;
+    const otPay = otHours * c.hourlyRate * c.otMultiplier;
+    const salary = c.monthlySalary;
+    const totalIncome = salary + allowancePay + taxiPay + otPay;
+
+    return {
+      staffId: staff.id,
+      empCode: staff.empCode,
+      name: staff.name,
+      position: staff.position,
+      counts,
+      // จำนวนกะที่ได้ค่ากะ/ค่าแท็กซี่ (รวม HT ที่มีกะฐานเดียวกัน)
+      afternoonCount: counts['2'] + counts['HT2'],
+      nightCount: counts['3'] + counts['HT3'],
+      workShifts,
+      workHours,
+      otShifts,
+      otHours,
+      leaveDays: counts['H'] + counts['L'] + counts['V'],
+      salary,
+      allowancePay,
+      taxiPay,
+      otPay,
+      totalIncome
     };
   });
 }

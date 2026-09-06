@@ -1033,6 +1033,28 @@ thead th.col-sticky-name,
   font-weight: 600;
 }
 
+/* ตารางรายได้มี 14 คอลัมน์ ต้องบีบให้เห็นคอลัมน์ "รวมรับ" โดยไม่ต้องเลื่อนแนวนอน */
+.modal-data-table.income-table {
+  font-size: 0.78rem;
+}
+
+.modal-data-table.income-table th,
+.modal-data-table.income-table td {
+  padding: 0.5rem 0.45rem;
+  white-space: nowrap;
+}
+
+/* คอลัมน์ตัวเลขชิดขวา อ่านยอดเงินง่ายกว่า */
+.modal-data-table.income-table th:nth-child(n + 4),
+.modal-data-table.income-table td:nth-child(n + 4) {
+  text-align: right;
+}
+
+.modal-data-table.income-table tfoot td {
+  border-bottom: none;
+  background: var(--bg-surface-elevated);
+}
+
 /* OT Claim Rules Table */
 .ot-rules-container {
   margin-top: 1.5rem;

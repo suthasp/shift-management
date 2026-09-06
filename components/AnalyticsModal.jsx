@@ -2,8 +2,11 @@
 
 import React, { useState } from 'react';
 import { BarChart3, X, DollarSign, Clock, Moon, ShieldAlert, Award, Download } from 'lucide-react';
-import { calculateStaffSummary } from '../utils/schedulerEngine';
-import { THAI_MONTHS, OT_CLAIM_RULES } from '../data/initialData';
+import { calculateStaffIncome } from '../utils/schedulerEngine';
+import { THAI_MONTHS, OT_CLAIM_RULES, COMPENSATION_DEFAULT } from '../data/initialData';
+
+const baht = (n) => '฿' + n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const bahtInt = (n) => '฿' + Math.round(n).toLocaleString('th-TH');
 
 export function AnalyticsModal({
   isOpen,
@@ -17,38 +20,48 @@ export function AnalyticsModal({
 }) {
   if (!isOpen) return null;
 
-  const [nightRate, setNightRate] = useState(settings?.allowanceRates?.nightShiftRate || 300);
-  const [weekendRate, setWeekendRate] = useState(settings?.allowanceRates?.weekendBonusRate || 150);
+  // อัตราค่าตอบแทน ปรับได้จากในหน้านี้ ตัวเลขคำนวณใหม่ทันทีจากตารางกะที่ซิงก์มาจาก Google Sheet
+  const [salary, setSalary] = useState(COMPENSATION_DEFAULT.monthlySalary);
+  const [hourlyRate, setHourlyRate] = useState(COMPENSATION_DEFAULT.hourlyRate);
+  const [allow2, setAllow2] = useState(COMPENSATION_DEFAULT.shiftAllowance['2']);
+  const [allow3, setAllow3] = useState(COMPENSATION_DEFAULT.shiftAllowance['3']);
+  const [taxiRate, setTaxiRate] = useState(COMPENSATION_DEFAULT.taxiAllowance['2']);
+  const [otMultiplier, setOtMultiplier] = useState(COMPENSATION_DEFAULT.otMultiplier);
 
-  const customSettings = {
-    ...settings,
-    allowanceRates: {
-      nightShiftRate: Number(nightRate),
-      weekendBonusRate: Number(weekendRate)
-    }
+  const compensation = {
+    ...COMPENSATION_DEFAULT,
+    monthlySalary: Number(salary) || 0,
+    hourlyRate: Number(hourlyRate) || 0,
+    shiftAllowance: { '1': 0, 'A': 0, '2': Number(allow2) || 0, '3': Number(allow3) || 0 },
+    taxiAllowance: { '1': 0, 'A': 0, '2': Number(taxiRate) || 0, '3': Number(taxiRate) || 0 },
+    otMultiplier: Number(otMultiplier) || 0
   };
 
-  const summary = calculateStaffSummary(schedule, staffList, daysCount, year, month, customSettings);
+  const income = calculateStaffIncome(schedule, staffList, daysCount, compensation);
 
-  const totalDCHours = summary.reduce((acc, s) => acc + s.totalHours, 0);
-  const totalNightShifts = summary.reduce((acc, s) => acc + s.counts['3'], 0);
-  const totalOTShifts = summary.reduce((acc, s) => acc + (s.totalOTShifts || 0), 0);
-  const totalOTHours = summary.reduce((acc, s) => acc + (s.totalOTHours || 0), 0);
-  const totalNightAllowance = summary.reduce((acc, s) => acc + s.nightShiftAllowance, 0);
-  const totalWeekendAllowance = summary.reduce((acc, s) => acc + s.weekendAllowance, 0);
-  const totalGrossAllowance = totalNightAllowance + totalWeekendAllowance;
+  const sumOf = (key) => income.reduce((acc, s) => acc + s[key], 0);
+  const totalDCHours = sumOf('workHours');
+  const totalNightShifts = income.reduce((acc, s) => acc + s.counts['3'], 0);
+  const totalOTShifts = sumOf('otShifts');
+  const totalOTHours = sumOf('otHours');
+  const totalSalary = sumOf('salary');
+  const totalAllowance = sumOf('allowancePay');
+  const totalTaxi = sumOf('taxiPay');
+  const totalOTPay = sumOf('otPay');
+  const totalPayroll = sumOf('totalIncome');
+  const avgIncome = totalPayroll / (income.length || 1);
 
   // Calculate fairness: average night shifts per employee
   const avgNights = (totalNightShifts / (staffList.length || 1)).toFixed(1);
 
   return (
     <div className="shift-picker-overlay" onClick={onClose}>
-      <div className="shift-picker-card" style={{ maxWidth: 880 }} onClick={e => e.stopPropagation()}>
+      <div className="shift-picker-card" style={{ maxWidth: 1180 }} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="modal-header">
           <h3>
             <BarChart3 size={20} color="var(--accent-cyan)" />
-            <span>สถิติการปฏิบัติงาน & คำนวณเบี้ยเลี้ยง ({THAI_MONTHS[month - 1]} {year + 543})</span>
+            <span>สถิติการปฏิบัติงาน & สรุปรายได้ ({THAI_MONTHS[month - 1]} {year + 543})</span>
           </h3>
           <button className="modal-close-btn" onClick={onClose}>
             <X size={20} />
@@ -80,22 +93,12 @@ export function AnalyticsModal({
             </div>
 
             <div className="stat-box">
-              <span className="stat-box-title">ประมาณการเบี้ยเลี้ยงกะดึกรวม</span>
+              <span className="stat-box-title">ค่ากะ + ค่าแท็กซี่รวม</span>
               <span className="stat-box-value" style={{ color: '#10b981' }}>
-                ฿{totalNightAllowance.toLocaleString()}
+                {bahtInt(totalAllowance + totalTaxi)}
               </span>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                อัตรา ฿{nightRate} / กะดึก
-              </span>
-            </div>
-
-            <div className="stat-box">
-              <span className="stat-box-title">รวมเบี้ยเลี้ยงพิเศษทั้งหมด</span>
-              <span className="stat-box-value" style={{ color: '#f59e0b' }}>
-                ฿{totalGrossAllowance.toLocaleString()}
-              </span>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                กะดึก + โบนัสวันเสาร์-อาทิตย์
+                ค่ากะ {bahtInt(totalAllowance)} + ค่าแท็กซี่ {bahtInt(totalTaxi)}
               </span>
             </div>
 
@@ -105,7 +108,17 @@ export function AnalyticsModal({
                 {totalOTShifts} <span style={{ fontSize: '1rem' }}>กะ ({totalOTHours} ชม.)</span>
               </span>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                ปฏิบัติงานแทนในวันหยุด (H)
+                คิดเป็นเงิน {bahtInt(totalOTPay)} ที่ {otMultiplier} แรง
+              </span>
+            </div>
+
+            <div className="stat-box">
+              <span className="stat-box-title">รวมค่าใช้จ่ายบุคลากรทั้งเดือน</span>
+              <span className="stat-box-value" style={{ color: '#f59e0b' }}>
+                {bahtInt(totalPayroll)}
+              </span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                เงินเดือน {bahtInt(totalSalary)} + ส่วนเพิ่ม {bahtInt(totalPayroll - totalSalary)} · เฉลี่ย {bahtInt(avgIncome)}/คน
               </span>
             </div>
           </div>
@@ -114,41 +127,46 @@ export function AnalyticsModal({
           <div style={{ background: 'var(--bg-surface-elevated)', padding: '0.85rem 1.25rem', borderRadius: '10px', border: '1px solid var(--border-color)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <DollarSign size={16} color="var(--accent-cyan)" />
-              <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>ปรับแต่งอัตราค่าตอบแทนพิเศษ (บาท):</span>
+              <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>ปรับแต่งอัตราค่าตอบแทน (บาท):</span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>ค่ากะดึก:</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  style={{ width: 90, padding: '0.25rem 0.5rem', height: 32 }}
-                  value={nightRate}
-                  onChange={e => setNightRate(e.target.value)}
-                />
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>กะวันหยุด:</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  style={{ width: 90, padding: '0.25rem 0.5rem', height: 32 }}
-                  value={weekendRate}
-                  onChange={e => setWeekendRate(e.target.value)}
-                />
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', flexWrap: 'wrap' }}>
+              {[
+                { label: 'เงินเดือน', value: salary, set: setSalary, width: 100 },
+                { label: 'ค่าแรง/ชม.', value: hourlyRate, set: setHourlyRate, width: 85, step: '0.1' },
+                { label: 'ค่ากะบ่าย', value: allow2, set: setAllow2, width: 70 },
+                { label: 'ค่ากะดึก', value: allow3, set: setAllow3, width: 70 },
+                { label: 'ค่าแท็กซี่', value: taxiRate, set: setTaxiRate, width: 70 },
+                { label: 'OT (แรง)', value: otMultiplier, set: setOtMultiplier, width: 70, step: '0.5' }
+              ].map(f => (
+                <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{f.label}:</label>
+                  <input
+                    type="number"
+                    step={f.step || '1'}
+                    className="form-control"
+                    style={{ width: f.width, padding: '0.25rem 0.5rem', height: 32 }}
+                    value={f.value}
+                    onChange={e => f.set(e.target.value)}
+                  />
+                </div>
+              ))}
             </div>
           </div>
 
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '-0.75rem 0 1.25rem' }}>
+            กะเช้า (1) และกะปกติ (A) ไม่มีค่ากะและค่าแท็กซี่ · กะบ่ายได้ค่าแท็กซี่กลับบ้าน กะดึกได้ค่าแท็กซี่มาทำงาน ·
+            OT คิดเฉพาะกะ HT ที่ {hourlyRate} บาท/ชม. × 8 ชม. × {otMultiplier} แรง = {baht(Number(hourlyRate) * 8 * Number(otMultiplier))}/กะ ·
+            วันลา (H/L/V) ไม่ได้ค่ากะและค่าแท็กซี่ แต่เงินเดือนเต็มจำนวน
+          </p>
+
           {/* Breakdown Table */}
           <h4 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-            ตารางสรุปรายบุคคล (Staff Breakdown)
+            สรุปรายได้รายบุคคล (Staff Income Breakdown)
           </h4>
 
           <div style={{ overflowX: 'auto' }}>
-            <table className="modal-data-table">
+            <table className="modal-data-table income-table">
               <thead>
                 <tr>
                   <th>#</th>
@@ -158,15 +176,17 @@ export function AnalyticsModal({
                   <th>กะบ่าย (2)</th>
                   <th>กะดึก (3)</th>
                   <th>กะ OT</th>
-                  <th>วันหยุด (H)</th>
+                  <th>ลา/หยุด</th>
                   <th>ชั่วโมงรวม</th>
-                  <th>เสาร์-อาทิตย์</th>
-                  <th>ค่ากะดึก</th>
-                  <th>รวมเบี้ยเลี้ยง</th>
+                  <th>เงินเดือน</th>
+                  <th>ค่ากะ</th>
+                  <th>ค่าแท็กซี่</th>
+                  <th>OT</th>
+                  <th>รวมรับ</th>
                 </tr>
               </thead>
               <tbody>
-                {summary.map((s, idx) => (
+                {income.map((s, idx) => (
                   <tr key={s.staffId}>
                     <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>{idx + 1}</td>
                     <td style={{ fontWeight: 600 }}>{s.name}</td>
@@ -174,23 +194,47 @@ export function AnalyticsModal({
                     <td>{s.counts['1']}</td>
                     <td>{s.counts['2']}</td>
                     <td style={{ fontWeight: 700, color: '#ec4899' }}>{s.counts['3']}</td>
-                    <td style={{ fontWeight: 700, color: (s.totalOTShifts || 0) > 0 ? '#00e676' : 'var(--text-muted)' }}>
-                      {s.totalOTShifts || 0}
+                    <td style={{ fontWeight: 700, color: s.otShifts > 0 ? '#00e676' : 'var(--text-muted)' }}>
+                      {s.otShifts}
                     </td>
-                    <td style={{ color: '#eab308' }}>{s.counts['H']}</td>
+                    <td style={{ color: '#eab308' }}>{s.leaveDays}</td>
                     <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent-cyan)' }}>
-                      {s.totalHours} ชม.
+                      {s.workHours} ชม.
                     </td>
-                    <td>{s.weekendShifts} วัน</td>
+                    <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
+                      {bahtInt(s.salary)}
+                    </td>
                     <td style={{ fontFamily: 'var(--font-mono)', color: '#10b981' }}>
-                      ฿{s.nightShiftAllowance.toLocaleString()}
+                      {bahtInt(s.allowancePay)}
+                    </td>
+                    <td style={{ fontFamily: 'var(--font-mono)', color: '#38bdf8' }}>
+                      {bahtInt(s.taxiPay)}
+                    </td>
+                    <td style={{ fontFamily: 'var(--font-mono)', color: s.otPay > 0 ? '#00e676' : 'var(--text-muted)' }}>
+                      {bahtInt(s.otPay)}
                     </td>
                     <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#f59e0b' }}>
-                      ฿{s.totalEstimatedAllowance.toLocaleString()}
+                      {baht(s.totalIncome)}
                     </td>
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr style={{ borderTop: '2px solid var(--border-color)', fontWeight: 700 }}>
+                  <td colSpan={3} style={{ textAlign: 'right' }}>รวมทั้งทีม {income.length} คน</td>
+                  <td>{income.reduce((a, s) => a + s.counts['1'], 0)}</td>
+                  <td>{income.reduce((a, s) => a + s.counts['2'], 0)}</td>
+                  <td style={{ color: '#ec4899' }}>{totalNightShifts}</td>
+                  <td style={{ color: '#00e676' }}>{totalOTShifts}</td>
+                  <td style={{ color: '#eab308' }}>{income.reduce((a, s) => a + s.leaveDays, 0)}</td>
+                  <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)' }}>{totalDCHours} ชม.</td>
+                  <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{bahtInt(totalSalary)}</td>
+                  <td style={{ fontFamily: 'var(--font-mono)', color: '#10b981' }}>{bahtInt(totalAllowance)}</td>
+                  <td style={{ fontFamily: 'var(--font-mono)', color: '#38bdf8' }}>{bahtInt(totalTaxi)}</td>
+                  <td style={{ fontFamily: 'var(--font-mono)', color: '#00e676' }}>{bahtInt(totalOTPay)}</td>
+                  <td style={{ fontFamily: 'var(--font-mono)', color: '#f59e0b' }}>{baht(totalPayroll)}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
 
