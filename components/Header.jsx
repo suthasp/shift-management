@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { BrandMark } from './BrandMark';
 import { SheetSyncBadge } from './SheetSyncBadge';
+import { SheetWriteBadge } from './SheetWriteBadge';
 import { THAI_MONTHS } from '../data/initialData';
 
 export function Header({
@@ -31,7 +32,10 @@ export function Header({
   onExportExcel,
   onPrint,
   sheetSync,
-  onSheetSync
+  onSheetSync,
+  sheetWrite,
+  onConfigureWrite,
+  onFlushWrite
 }) {
   const toggleTheme = () => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
@@ -100,6 +104,15 @@ export function Header({
 
           {/* สถานะซิงก์กับ Google Sheet ของเดือนที่เลือก */}
           {sheetSync && <SheetSyncBadge state={sheetSync} onSync={onSheetSync} />}
+
+          {/* สถานะการเขียนการแก้ไขกลับลงชีต */}
+          {sheetWrite && (
+            <SheetWriteBadge
+              state={sheetWrite}
+              onConfigure={onConfigureWrite}
+              onFlush={onFlushWrite}
+            />
+          )}
 
           {/* Auto-Scheduler Button */}
           <button 

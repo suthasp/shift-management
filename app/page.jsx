@@ -24,6 +24,7 @@ import { AnalyticsModal } from '../components/AnalyticsModal';
 import { AutoScheduleModal } from '../components/AutoScheduleModal';
 import { StaffModal } from '../components/StaffModal';
 import { fetchMonthFromSheet, fetchStaffFromSheet } from '../utils/sheetSync';
+import { pushChangesToSheet, getWriteConfig, setWriteConfig } from '../utils/sheetWrite';
 
 /** ดึงจากชีตซ้ำทุก 1 นาที (Google แคชไฟล์ที่เผยแพร่ราว 5 นาที ถี่กว่านี้ไม่ได้ข้อมูลใหม่) */
 const SHEET_POLL_MS = 60 * 1000;
@@ -120,7 +121,15 @@ export default function Home() {
   const [staffEdited, setStaffEdited] = useState(false);
   const applyingStaffRef = useRef(false);
 
+  // --- เขียนกลับลงชีตผ่าน Apps Script -------------------------------------
+  // รวมการแก้หลายช่องที่เกิดติด ๆ กันเป็นชุดเดียว แล้วค่อยยิงครั้งเดียว
+  const [writeStatus, setWriteStatus] = useState({ status: 'idle', unsavedCount: 0 });
+  const writeQueueRef = useRef(new Map()); // key = "staffId:day" กันการแก้ช่องเดิมซ้ำ
+  const writeTimerRef = useRef(null);
+  const writeMonthRef = useRef({ year, month });
+
   useEffect(() => { staffListRef.current = staffList; }, [staffList]);
+  useEffect(() => { writeMonthRef.current = { year, month }; }, [year, month]);
 
   const isMonthLocked = editedMonths.has(monthKey(year, month));
 
@@ -140,6 +149,124 @@ export default function Home() {
       return next;
     });
   }, [year, month]);
+
+  /** ปลดล็อกเดือน ให้กลับไปรับข้อมูลจากชีตอัตโนมัติอีกครั้ง */
+  const unlockMonth = useCallback((yr, mo) => {
+    const key = monthKey(yr, mo);
+    setEditedMonths(prev => {
+      if (!prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.delete(key);
+      try {
+        localStorage.setItem(EDITED_MONTHS_KEY, JSON.stringify([...next]));
+      } catch (e) {
+        console.warn('LocalStorage error:', e);
+      }
+      return next;
+    });
+  }, []);
+
+  /** ยิงคิวที่ค้างอยู่ไปเขียนลงชีต */
+  const flushSheetWrites = useCallback(async () => {
+    if (writeTimerRef.current) {
+      clearTimeout(writeTimerRef.current);
+      writeTimerRef.current = null;
+    }
+
+    const queued = [...writeQueueRef.current.values()];
+    if (queued.length === 0) return;
+
+    const { url } = getWriteConfig();
+    if (!url) {
+      setWriteStatus({ status: 'unconfigured', unsavedCount: queued.length });
+      return;
+    }
+
+    // จับกลุ่มตามเดือน เผื่อผู้ใช้สลับเดือนระหว่างที่ยังมีของค้างในคิว
+    const byMonth = new Map();
+    queued.forEach(item => {
+      const k = monthKey(item.year, item.month);
+      if (!byMonth.has(k)) byMonth.set(k, { year: item.year, month: item.month, changes: [] });
+      byMonth.get(k).changes.push({
+        staffNo: item.staffNo,
+        staffName: item.staffName,
+        day: item.day,
+        code: item.code
+      });
+    });
+
+    setWriteStatus({ status: 'saving', pendingCount: queued.length, unsavedCount: queued.length });
+
+    try {
+      for (const batch of byMonth.values()) {
+        await pushChangesToSheet(batch);
+        // เขียนสำเร็จแล้วชีตกับแอปตรงกัน จึงปลดล็อกให้ซิงก์อัตโนมัติต่อได้
+        unlockMonth(batch.year, batch.month);
+      }
+      writeQueueRef.current.clear();
+      setWriteStatus({ status: 'saved', savedAt: Date.now(), unsavedCount: 0 });
+    } catch (err) {
+      // คงคิวไว้ให้กดลองใหม่ได้ และคงล็อกเดือนไว้เพื่อไม่ให้ poll ทับงานที่ยังไม่ได้บันทึก
+      setWriteStatus({
+        status: 'error',
+        error: err.message,
+        unsavedCount: writeQueueRef.current.size
+      });
+    }
+  }, [unlockMonth]);
+
+  /**
+   * เพิ่มการแก้ไขเข้าคิว แล้วตั้งเวลายิงรวมชุด
+   * หน่วง 900ms เพราะการกดคีย์ลัดจะเลื่อนไปช่องถัดไปเอง ผู้ใช้มักแก้รวดเดียวหลายช่อง
+   */
+  const queueSheetWrite = useCallback((changes, { auto = true } = {}) => {
+    if (applyingSheetRef.current) return; // ข้อมูลที่เพิ่งดึงมาจากชีต ไม่ต้องเขียนกลับ
+    const { year: yr, month: mo } = writeMonthRef.current;
+
+    changes.forEach(ch => {
+      const staff = staffListRef.current.find(s => s.id === ch.staffId);
+      if (!staff) return;
+      writeQueueRef.current.set(`${ch.staffId}:${ch.dayIndex}`, {
+        year: yr,
+        month: mo,
+        staffNo: staff.id,
+        staffName: staff.name,
+        day: ch.dayIndex + 1,
+        code: ch.code
+      });
+    });
+
+    setWriteStatus(prev => ({
+      ...prev,
+      status: prev.status === 'saving' ? 'saving' : 'idle',
+      unsavedCount: writeQueueRef.current.size
+    }));
+
+    // auto:false ใช้กับการเขียนก้อนใหญ่ (เช่นจัดกะอัตโนมัติทั้งเดือน)
+    // ให้ผู้ใช้กดยืนยันเอง จะได้ไม่ทับข้อมูลในชีตทั้งเดือนโดยไม่ทันตั้งตัว
+    if (!auto) return;
+
+    if (writeTimerRef.current) clearTimeout(writeTimerRef.current);
+    writeTimerRef.current = setTimeout(() => flushSheetWrites(), 900);
+  }, [flushSheetWrites]);
+
+  /** ตั้งค่า URL + token ของ Apps Script จากในแอป */
+  const configureSheetWrite = useCallback(() => {
+    const current = getWriteConfig();
+    const url = window.prompt(
+      'URL ของ Apps Script Web App (ลงท้ายด้วย /exec)\nดูวิธีติดตั้งใน apps-script/README.md',
+      current.url
+    );
+    if (url === null) return;
+    const token = window.prompt('Token (ต้องตรงกับ SHARED_TOKEN ในไฟล์ Code.gs)', current.token);
+    if (token === null) return;
+
+    setWriteConfig({ url, token });
+    setWriteStatus({
+      status: url.trim() ? 'idle' : 'unconfigured',
+      unsavedCount: writeQueueRef.current.size
+    });
+  }, []);
 
   /** เรียกเมื่อผู้ใช้แก้ข้อมูลพนักงานเอง เพื่อหยุด auto-sync รายชื่อ */
   const markStaffEdited = useCallback(() => {
@@ -346,6 +473,14 @@ export default function Home() {
     return () => clearInterval(id);
   }, [mounted, isMonthLocked, syncFromSheet, staffList]);
 
+  // ตั้งสถานะเริ่มต้นของการเขียนกลับ ตามว่าตั้งค่าปลายทางไว้หรือยัง
+  useEffect(() => {
+    if (!mounted) return;
+    if (!getWriteConfig().configured) {
+      setWriteStatus(prev => (prev.status === 'idle' ? { ...prev, status: 'unconfigured' } : prev));
+    }
+  }, [mounted]);
+
   // Calculations
   const dailyCoverage = useMemo(() => {
     return calculateDailyCoverage(schedule, staffList, daysCount, settings);
@@ -379,6 +514,7 @@ export default function Home() {
         [staffId]: currentStaffShifts
       };
     });
+    queueSheetWrite([{ staffId, dayIndex, code: newShift }]);
   };
 
   // Batch Fill
@@ -394,11 +530,21 @@ export default function Home() {
         [staffId]: current
       };
     });
+
+    const batch = [];
+    for (let d = startDay; d <= endDay; d++) {
+      batch.push({ staffId, dayIndex: d, code: shiftCode });
+    }
+    queueSheetWrite(batch);
   };
 
   // Shift Swap Handler
   const handleConfirmSwap = ({ staffAId, dayA, shiftA, staffBId, dayB, shiftB }) => {
     markMonthEdited();
+    queueSheetWrite([
+      { staffId: staffAId, dayIndex: dayA, code: shiftB },
+      { staffId: staffBId, dayIndex: dayB, code: shiftA }
+    ]);
     setSchedule(prev => {
       const nextA = prev[staffAId] ? [...prev[staffAId]] : new Array(daysCount).fill('H');
       const nextB = prev[staffBId] ? [...prev[staffBId]] : new Array(daysCount).fill('H');
@@ -427,6 +573,16 @@ export default function Home() {
       });
       markMonthEdited();
       setSchedule(generated);
+
+      // ตารางทั้งเดือนถูกสร้างใหม่หมด เข้าคิวไว้แต่ไม่ยิงเอง
+      // ให้ผู้ใช้กดปุ่มบนป้าย "ยังไม่ได้บันทึก" ยืนยันก่อนจะไปทับข้อมูลในชีต
+      const bulk = [];
+      staffList.forEach(s => {
+        (generated[s.id] || []).forEach((code, dayIndex) => {
+          bulk.push({ staffId: s.id, dayIndex, code });
+        });
+      });
+      queueSheetWrite(bulk, { auto: false });
     } catch (err) {
       alert(err.message || 'ไม่สามารถจัดกะอัตโนมัติได้');
     }
@@ -504,6 +660,9 @@ export default function Home() {
         onPrint={() => window.print()}
         sheetSync={{ ...sheetStatus, locked: isMonthLocked }}
         onSheetSync={() => syncFromSheet({ force: true })}
+        sheetWrite={writeStatus}
+        onConfigureWrite={configureSheetWrite}
+        onFlushWrite={flushSheetWrites}
       />
 
       {/* Real-time Status / KPI Bar */}
