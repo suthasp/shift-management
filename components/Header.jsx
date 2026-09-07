@@ -65,7 +65,7 @@ export function Header({
                 24/7 MISSION CRITICAL
               </span>
             </h1>
-            <p>ระบบกำหนดและบริหารจัดการตารางกะศูนย์ข้อมูล Data Center Operation</p>
+            <p>ระบบกำหนดและบริหารจัดการตารางกะศูนย์ข้อมูล TOC-RST</p>
           </div>
         </div>
 
