@@ -25,6 +25,7 @@ import { AutoScheduleModal } from '../components/AutoScheduleModal';
 import { StaffModal } from '../components/StaffModal';
 import { fetchMonthFromSheet, fetchStaffFromSheet } from '../utils/sheetSync';
 import { pushChangesToSheet, getWriteConfig, setWriteConfig } from '../utils/sheetWrite';
+import { SHEET_CACHE_SECONDS } from '../utils/sheetSync';
 
 /** ดึงจากชีตซ้ำทุก 1 นาที (Google แคชไฟล์ที่เผยแพร่ราว 5 นาที ถี่กว่านี้ไม่ได้ข้อมูลใหม่) */
 const SHEET_POLL_MS = 60 * 1000;
@@ -128,6 +129,10 @@ export default function Home() {
   const writeTimerRef = useRef(null);
   const writeMonthRef = useRef({ year, month });
 
+  // หลังเขียนลงชีตสำเร็จ ต้องพักการดึงขาเข้าไว้ก่อน
+  // เพราะ Google แคชไฟล์ที่ publish ไว้ราว 5 นาที ถ้าดึงทันทีจะได้ค่าเก่ากลับมาทับสิ่งที่เพิ่งแก้
+  const syncPausedUntilRef = useRef(0);
+
   useEffect(() => { staffListRef.current = staffList; }, [staffList]);
   useEffect(() => { writeMonthRef.current = { year, month }; }, [year, month]);
 
@@ -203,6 +208,9 @@ export default function Home() {
         // เขียนสำเร็จแล้วชีตกับแอปตรงกัน จึงปลดล็อกให้ซิงก์อัตโนมัติต่อได้
         unlockMonth(batch.year, batch.month);
       }
+      // ...แต่ต้องพักการดึงไว้จนกว่าแคชของ Google จะหมดอายุ
+      // ไม่งั้นรอบ poll ถัดไปจะได้ค่าเก่ากลับมาทับสิ่งที่เพิ่งเขียนไป
+      syncPausedUntilRef.current = Date.now() + (SHEET_CACHE_SECONDS + 30) * 1000;
       writeQueueRef.current.clear();
       setWriteStatus({ status: 'saved', savedAt: Date.now(), unsavedCount: 0 });
     } catch (err) {
@@ -400,6 +408,10 @@ export default function Home() {
    */
   const syncFromSheet = useCallback(async ({ force = false } = {}) => {
     const key = monthKey(year, month);
+
+    // อยู่ในช่วงพักหลังเพิ่งเขียนลงชีต ข้ามไปก่อน (ผู้ใช้กดเองยังดึงได้)
+    if (!force && Date.now() < syncPausedUntilRef.current) return;
+
     setSheetStatus(s => ({ ...s, status: 'loading' }));
     try {
       const result = await fetchMonthFromSheet({
